@@ -19,7 +19,7 @@ dynamic_extract <- function(predictor, tracks){
   #for loop by year - bind = TRUE
   for(z in years){
     trax <- filter(tracks, year==z)
-    pred <- rast(paste0("D:/Satellite_Data/daily/", predictor, "/", predictor, "_", z, ".nc"))
+    pred <- rast(paste0("E:/Satellite_Data/daily/", predictor, "/", predictor, "_", z, ".nc"))
     
     #remove extra slice for front_freq
     if(predictor == "front_freq"){
@@ -82,7 +82,7 @@ dynamic_chlorophyll <- function(predictor, tracks){
   #for loop by year - bind = TRUE
   for(z in years){
     trax <- filter(tracks, year==z)
-    pred <- rast(paste0("D:/Satellite_Data/daily/chl/resampled/chl_", z, "_resampled.nc"))
+    pred <- rast(paste0("E:/Satellite_Data/daily/chl/resampled/chl_", z, "_resampled.nc"))
     
     e <- ext(trax) + c(0.5,0.5,0.5,0.5) #create SpatExtent for cropping raster
     pred_crop <- crop(pred, e) #crop to increase speed
@@ -131,7 +131,7 @@ dynamic_chlorophyll <- function(predictor, tracks){
 dynamic_chlorophyll_1997 <- function(predictor, tracks){
   
   trax <- tracks
-  pred <- rast(paste0("D:/Satellite_Data/daily/chl/resampled/chl_1997_resampled.nc"))
+  pred <- rast(paste0("E:/Satellite_Data/daily/chl/resampled/chl_1997_resampled.nc"))
   
   e <- ext(trax) + c(0.5,0.5,0.5,0.5) #create SpatExtent for cropping raster
   pred_crop <- crop(pred, e) #crop to increase speed
@@ -187,7 +187,7 @@ dynamic_wind <- function(predictor, tracks, direction){
   #for loop by year - bind = TRUE
   for(z in years){
     trax <- filter(tracks, year==z)
-    pred <- rast(paste0("D:/Satellite_Data/monthly/wind/", direction, "/", direction, "_resampled_", z, ".nc"))
+    pred <- rast(paste0("E:/Satellite_Data/monthly/wind/", direction, "/", direction, "_resampled_", z, ".nc"))
     
     e <- ext(trax) + c(0.5,0.5,0.5,0.5) #create SpatExtent for cropping raster
     pred_crop <- crop(pred, e) #crop to increase speed
@@ -237,7 +237,7 @@ dynamic_wind <- function(predictor, tracks, direction){
 dynamic_wind_1999 <- function(predictor, tracks, direction){
   
   trax <- tracks
-  pred <- rast(paste0("D:/Satellite_Data/monthly/wind/", direction, "/", direction, "_resampled_1999.nc"))
+  pred <- rast(paste0("E:/Satellite_Data/monthly/wind/", direction, "/", direction, "_resampled_1999.nc"))
   
   e <- ext(trax) + c(0.5,0.5,0.5,0.5) #create SpatExtent for cropping raster
   pred_crop <- crop(pred, e) #crop to increase speed

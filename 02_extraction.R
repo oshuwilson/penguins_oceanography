@@ -1,5 +1,6 @@
 #extract environmental variables for RSF
 #ADD FSLE AND FIX DIST2ICE????
+# DONT USE ICE VARIABLES FOR KIPE OR SUBANTARCTIC MAPE COLONIES
 
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
