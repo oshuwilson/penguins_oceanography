@@ -14,7 +14,7 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 
 #define species site and stage
 this.species <- "KIPE"
-this.site <- "Macquarie"
+this.site <- "Crozet"
 this.stage <- "incubation"
 
 #read in steps
@@ -99,6 +99,9 @@ rm(leads)
 
 
 # 3. Export
+
+#reproject steps to planar view
+steps <- project(steps, "epsg:6932")
 
 #extract data frame
 data <- as.data.frame(steps, geom = "XY")

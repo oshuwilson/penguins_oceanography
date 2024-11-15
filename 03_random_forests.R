@@ -18,7 +18,7 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 
 #define species, site, and stage
 this.species <- "KIPE"
-this.site <- "Macquarie"
+this.site <- "Crozet"
 this.stage <- "incubation"
 
 #read in data with covariates extracted
@@ -76,10 +76,19 @@ data$pa <- ordered(data$pa, levels = c("presence", "absence"))
 registerDoParallel()
 cores <- parallel::detectCores() - 2
 
+#ideal number of folds is 10
+v <- 10
+
+#if number of individuals is less than 10, change v to n_ind - 1
+n_ind <- length(unique(data$individual_id))
+if(n_ind < 10){
+  v <- n_ind - 1
+}
+
 #create cross-validation folds
 folds <- group_vfold_cv(data = data, 
                         group = individual_id, #split training/testing data by individual
-                        v = 10, #number of folds
+                        v = v, #number of folds
                         balance = "observations" #roughly the same number of points in each fold
 )
 
@@ -155,7 +164,7 @@ rf_explainer <- explain_tidymodels(model = rf_fit,
 
 #compute partial dependence
 pdps <- model_profile(rf_explainer, 
-                      variables = c("eddies", "front_freq", "curr"),
+                      variables = c("eddies", "front_freq", "curr", "ssh"),
                       N = 500)
 
 #extract pdp predictive values

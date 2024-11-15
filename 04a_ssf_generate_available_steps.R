@@ -15,7 +15,7 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 
 #test run with KIPE from Macquarie
 this.species <- "KIPE"
-this.site <- "Macquarie"
+this.site <- "Crozet"
 this.stage <- "incubation"
 
 #read in tracks
@@ -76,7 +76,7 @@ for(i in trip_ids){
   steps <- steps_by_burst(trax)
   
   #create available steps
-  steps <- steps %>% random_steps(n_control = 10)
+  steps <- steps %>% random_steps(n_control = 20)
   
   #append individual and trip ids from tracks
   steps$trip_id <- this.trip

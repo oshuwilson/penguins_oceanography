@@ -16,7 +16,7 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 
 #define species site and stage
 this.species <- "KIPE"
-this.site <- "Macquarie"
+this.site <- "Crozet"
 this.stage <- "incubation"
 
 #load in tracks and background data
@@ -41,7 +41,7 @@ rm(tracks, back)
 # 2.1 Static Variables
 
 #depth
-depth <- rast("D:/Satellite_Data/static/depth/depth.nc")
+depth <- rast("E:/Satellite_Data/static/depth/depth.nc")
 
 #create SpatVector for tracks and background
 data <- vect(data,
@@ -55,11 +55,11 @@ data$depth <- extract(depth, data, ID=F)
 data <- data %>% drop_na(depth)
 
 #slope
-slope <- rast("D:/Satellite_Data/static/slope/slope.nc")
+slope <- rast("E:/Satellite_Data/static/slope/slope.nc")
 data$slope <- extract(slope, data, ID=F)
 
 #dshelf
-dshelf <- rast("D:/Satellite_Data/static/dshelf/dshelf_resampled.nc")
+dshelf <- rast("E:/Satellite_Data/static/dshelf/dshelf_resampled.nc")
 data$dshelf <- extract(dshelf, data, ID=F)
 
 #cleanup static
@@ -69,7 +69,7 @@ rm(depth, slope, dshelf)
 # 2.2 Dynamic Variables (add chl or wind?)
 
 #load in dynamic_extract functions
-source("code/extraction_functions.R")
+source("code/functions/extraction_functions.R")
 
 #sst 
 data <- dynamic_extract("sst", data)
@@ -112,7 +112,7 @@ data <- dynamic_extract("eddies", data)
 data <- dynamic_extract("dist2ice", data)
 
 #leads
-leads <- rast("D:/Satellite_Data/static/leads/leads_resampled.nc")
+leads <- rast("E:/Satellite_Data/static/leads/leads_resampled.nc")
 data$leads <- extract(leads, data, ID=F)
 rm(leads)
 
