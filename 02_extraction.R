@@ -1,6 +1,6 @@
 #extract environmental variables for RSF
-#ADD FSLE AND FIX DIST2ICE????
-# DONT USE ICE VARIABLES FOR KIPE OR SUBANTARCTIC MAPE COLONIES
+#ADD FSLE
+#EDIT LEADS TO ONLY EXTRACT FOR WINTER MONTHS
 
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
@@ -15,8 +15,8 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 # 1. Setup
 
 #define species site and stage
-this.species <- "KIPE"
-this.site <- "Crozet"
+this.species <- "ADPE"
+this.site <- "Pointe Geologie"
 this.stage <- "incubation"
 
 #load in tracks and background data
@@ -92,13 +92,6 @@ data <- dynamic_extract("uo", data)
 data <- dynamic_extract("vo", data)
 data$curr <- sqrt((data$uo^2) + (data$vo^2))
 
-#nekton
-data <- dynamic_extract("epipelagic_nekton", data)
-data <- dynamic_extract("upper_meso_nekton", data)
-data <- dynamic_extract("lower_meso_nekton", data)
-data <- dynamic_extract("upper_mig_meso_nekton", data)
-data <- dynamic_extract("lower_mig_meso_nekton", data)
-
 
 # 2.3 Oceanographic Variables
 
@@ -124,3 +117,4 @@ data <- as.data.frame(data, geom = "XY")
 
 #export
 saveRDS(data, file = paste0("output/extractions/", this.species, "/", this.site, "/", this.stage, "_extracted.RDS"))
+

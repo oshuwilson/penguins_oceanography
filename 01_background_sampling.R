@@ -1,16 +1,17 @@
 #create background samples for penguins
+
+#RESAMPLE ALL TO A 2-HOUR STEP-LENGTH????
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 
 {
   library(sf)
   library(terra)
-  library(dplyr)
-  library(lubridate)
+  library(tidyverse)
 }
 
 #set species
-this.species <- "MAPE"
+this.species <- "ADPE"
 
 #read in oceans file and metadata
 oceans <- readRDS("data/oceans_vect.RDS")
@@ -21,7 +22,7 @@ meta <- meta %>%
   filter(abbreviated_name == this.species)
 
 #create list of all regions
-regions <- c("Heard", "Marion", "South Georgia")
+regions <- c("Pointe Geologie")
 
 #loop over all regions
 for(i in 1:length(regions)){
@@ -38,7 +39,7 @@ for(i in 1:length(regions)){
   for(j in 1:length(stages)){
     stage_file <- files[j]
     stage_name <- stages[j]
-    stage_name <- file_path_sans_ext(stage_name)
+    stage_name <- tools::file_path_sans_ext(stage_name)
     
     #read in tracks
     tracks <- readRDS(stage_file)

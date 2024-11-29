@@ -1,6 +1,6 @@
 #random forest resource selection functions for different suites of covariates
 #ADAPT FOR FSLE
-#remove ice variables for subantarctic species
+#PRODUCE PDPS FOR ICE VARIABLES TOO
 
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
@@ -17,8 +17,8 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 }
 
 #define species, site, and stage
-this.species <- "KIPE"
-this.site <- "Crozet"
+this.species <- "ADPE"
+this.site <- "Pointe Geologie"
 this.stage <- "incubation"
 
 #read in data with covariates extracted
@@ -26,25 +26,31 @@ alldata <- readRDS(paste0("output/extractions/", this.species, "/", this.site, "
 
 #define all predictor names
 all_predictors <- c("depth", "slope", "dshelf", "sst", "mld", "sal", "ssh", "sic", "curr",
-                    "epipelagic_nekton", "upper_meso_nekton", "lower_meso_nekton",
-                    "upper_mig_meso_nekton", "lower_mig_meso_nekton", "lower_hmig_meso_nekton",
                     "eddies", "dist2ice", "front_freq", "leads")
 
 
 # 1. Format dataframe for model
 
-# predictor set 1 - Topography and Oceanography
-m1 <- c("depth", "slope", "dshelf", "sst", "mld", "sal", "ssh", "curr", "eddies", "front_freq")
+# base predictor set - Topography and Oceanography
+preds <- c("depth", "slope", "dshelf", "sst", "mld", "sal", "ssh", "curr", "eddies", "front_freq")
 
-# predictor set 2 - Topography, Oceanography, and Sea Ice
-m2 <- c("depth", "slope", "dshelf", "sst", "mld", "sal", "ssh", "curr", "eddies", "front_freq", 
-        "sic", "dist2ice", "leads")
+# if minimum dist2ice is less than 100km, add dist2ice
+if(min(alldata$dist2ice, na.rm = TRUE) < 100){
+  preds <- c(preds, "dist2ice")
+}
 
-# choose predictor set based on species
-if(this.species == "KIPE"){ #King Penguins don't venture to ice edge
-  preds <- m1
-} else { # all other species do at least occasionally 
-  preds <- m2
+# if sea ice concentration ever exceeds 1%, add sea ice concentration
+if(max(alldata$sic, na.rm = TRUE) > 0.01){
+  preds <- c(preds, "sic")
+}
+
+# if sic exceeds 1% and the data are from Austral winter, add leads
+if(max(alldata$sic, na.rm = TRUE) > 0.01){
+  alldata$month <- month(alldata$date)
+  if(any(alldata$month %in% c(5,6,7,8,9,10))){
+    preds <- c(preds, "leads")
+  }
+  alldata <- select(alldata, -month)
 }
 
 #select only predictor columns
@@ -79,10 +85,10 @@ cores <- parallel::detectCores() - 2
 #ideal number of folds is 10
 v <- 10
 
-#if number of individuals is less than 10, change v to n_ind - 1
+#if number of individuals is less than 10, change v to n_ind
 n_ind <- length(unique(data$individual_id))
 if(n_ind < 10){
-  v <- n_ind - 1
+  v <- n_ind
 }
 
 #create cross-validation folds
@@ -151,7 +157,7 @@ rf_fit <- rf_best_wf %>%
   fit(data)
 
 #visualise variable importance
-rf_fit %>% extract_fit_parsnip() %>% vip()
+rf_fit %>% extract_fit_parsnip() %>% vip(num_features = length(predictors))
 
 #extract variable importance values
 var_imp <- rf_fit %>% extract_fit_parsnip() %>% vi()
@@ -167,6 +173,11 @@ pdps <- model_profile(rf_explainer,
                       variables = c("eddies", "front_freq", "curr", "ssh"),
                       N = 500)
 
+pdps <- model_profile(rf_explainer, 
+                      variables = c("eddies", "front_freq", "curr", "ssh", 
+                                    "dist2ice", "sic", "leads"),
+                      N = 500)
+
 #extract pdp predictive values
 pdp_ovr <- as_tibble(pdps$agr_profiles) %>%
   rename(x = `_x_`, yhat = `_yhat_`, var = `_vname_`) %>%
@@ -176,7 +187,7 @@ pdp_ovr <- as_tibble(pdps$agr_profiles) %>%
 #plot pdps
 p1 <- ggplot(pdp_ovr, aes(x, yhat)) + 
   geom_line(color = "darkblue", linewidth = 1.2) + 
-  facet_wrap(~var, scales = "free_x") + 
+  facet_wrap(~var, scales = "free_x", nrow = 1) + 
   ylim(0, 1) + 
   theme_bw() +
   ylab("Predicted habitat suitability") + 
@@ -186,7 +197,7 @@ p1
 
 # 4. Export key information
 
-# variable importance values
+# mtry values
 mtry_scores <- mtry_scores %>% 
   mutate(best_mtry = ifelse(mtry == rf_best$mtry[1], "Best", "Not")) %>%
   select(mtry, .estimate, best_mtry) %>%
@@ -196,9 +207,11 @@ saveRDS(mtry_scores, file = paste0("output/random_forests/", this.species, "/", 
 
 # partial dependence plots
 saveRDS(pdp_ovr, file = paste0("output/random_forests/", this.species, "/", this.site, "_", this.stage, "_pdp.rds"))
-ggsave(p1, file = paste0("output/random_forests/", this.species, "/000_", this.site, "_", this.stage, "_pdp.png"))
+ggsave(p1, 
+       file = paste0("output/random_forests/", this.species, "/000_", this.site, "_", this.stage, "_pdp.png"),
+       width = 10, height = 5, dpi = 300)
 
 # model
 saveRDS(rf_fit, file = paste0("output/random_forests/", this.species, "/", this.site, "_", this.stage, "_rf.rds"))
 
-        
+# variable importance scores

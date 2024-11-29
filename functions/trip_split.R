@@ -3,7 +3,7 @@ trip_split <- function(tracks, meta, buff.dist){
 
 #get deployment sites
 sites <- meta %>% 
-  select(individual_id, deployment_decimal_latitude, deployment_decimal_longitude)
+  dplyr::select(individual_id, deployment_decimal_latitude, deployment_decimal_longitude)
 
 #plot start points
 starts <- vect(sites, 
@@ -38,7 +38,7 @@ tracks <- as.data.frame(tracks, geom = "XY")
 home_points <- tracks %>% 
   mutate(home = ifelse(dist_to_colony < buff.dist, 1, 0)) %>%
   filter(home == 1) %>%
-  select(-home)
+  dplyr::select(-home)
 
 #group home points into trip segments based on time differences of over 4 hours
 home_points <- home_points %>% 
@@ -49,14 +49,14 @@ home_points <- home_points %>%
   mutate(trip = ifelse(timediff > 4, 1, 0)) %>% 
   mutate(trip = ifelse(is.na(trip), 0, trip)) %>%
   mutate(trip = cumsum(trip)) %>%
-  select(-timediff, -lag_date)
+  dplyr::select(-timediff, -lag_date)
 
 #identify start/end points of trips (as the minimum distance to a colony within a timeframe)
 terminals <- home_points %>% 
   group_by(individual_id, trip) %>%
   filter(dist_to_colony == min(dist_to_colony)) %>%
   ungroup() %>%
-  select(-trip) %>%
+  dplyr::select(-trip) %>%
   mutate(trip_start = 1)
 
 #append start_end points to tracks
@@ -77,8 +77,8 @@ tracks <- tracks %>%
 tracks <- tracks %>% 
   group_by(trip) %>%
   mutate(start_time = first(date)) %>%
-  mutate(time_since_start = as.numeric(difftime(date, start_time, units = "days"))) %>%
-  select(-start_time, -trip_start)
+  mutate(time_since_start = as.numeric(difftime(date, start_time, units = "hours"))) %>%
+  dplyr::select(-start_time, -trip_start)
 
 #remove trips that never leave boundary
 short_trips <- tracks %>% 
@@ -88,6 +88,16 @@ short_trips <- tracks %>%
   mutate(trip = as.factor(trip))
 tracks <- tracks %>% 
   filter(!trip %in% levels(short_trips$trip)) %>%
+  ungroup()
+
+#remove trips with fewer than 10 points
+small_trips <- tracks %>% 
+  group_by(trip) %>%
+  summarise(n = n()) %>%
+  filter(n < 10) %>%
+  mutate(trip = as.factor(trip))
+tracks <- tracks %>%
+  filter(!trip %in% levels(small_trips$trip)) %>%
   ungroup()
 
 print(p1)
