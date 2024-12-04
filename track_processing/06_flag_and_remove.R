@@ -35,10 +35,10 @@ tracks <- readRDS(paste0(species_code, "_state_space_modelled.RDS"))
 #read in flagging data if already exists
 try(flag_IDs <- readRDS("flags.RDS"))
 
-#if n_users already equals 3, remove all variables to prevent further action
-if(max(flag_IDs$n_users) >= 3){
+#if flag IDs exist, clean environment to prevent further action
+if(exists("flag_IDs")){
   rm(list=ls())
-  stop("Three users have already checked this species")
+  stop("This species has already been checked")
 }
 
 ##------------------##
@@ -48,10 +48,10 @@ if(max(flag_IDs$n_users) >= 3){
 # 3. Flag individuals with erroneous tracks
 
 #define individual IDs flagged for removal
-ind_flag <- c("king22_SG", "king24_SG")
+ind_flag <- c("165150")
 
 #define corresponding device IDs flagged for removal - MUST BE SAME ORDER AS INDIVIDUAL IDs
-dev_flag <- c("14354", "14360")
+dev_flag <- c("165150")
 
 ##----------------##
 ## User Input End ##
@@ -78,62 +78,24 @@ if(!all(flagged$combined_IDs %in% sp_meta$combined_IDs)){
   stop("Read above messages")
 }
 
-#if first user to flag for this species, create new dataframe and export
-if(!exists("flag_IDs")){
-  
-  #select only combined IDs
-  flagged <- flagged %>%
-    select(combined_IDs) %>%
-    mutate(combined_IDs = as.factor(combined_IDs))
-  
-  #add count and number of users columns 
-  flagged <- flagged %>%
-    mutate(count = 1,
-           n_users = 1)
-  
-  #export
-  saveRDS(flagged, file = "flags.RDS")
-  
-}
+#create dataframe of flagged IDs and export
+flagged <- flagged %>%
+  select(combined_IDs) %>%
+  mutate(combined_IDs = as.factor(combined_IDs))
 
-#if others have flagged already, append user flags
-if(exists("flag_IDs")){
-  
-  #select only combined IDs
-  flagged <- flagged %>% 
-    select(combined_IDs) %>%
-    mutate(combined_IDs = as.factor(combined_IDs))
-  new_flags <- levels(flagged$combined_IDs)
-  
-  #add one to count if your flagged IDs are present already
-  flag_IDs <- flag_IDs %>%
-    mutate(count = if_else(combined_IDs %in% new_flags, count + 1, count))
-  
-  #extract IDs not previously flagged
-  flag_IDs <- flag_IDs %>% 
-    mutate(combined_IDs = as.factor(combined_IDs))
-  old_flags <- levels(flag_IDs$combined_IDs)
-  flagged <- flagged %>% 
-    filter(!combined_IDs %in% old_flags) %>%
-    mutate(count = 1,
-           n_users = max(flag_IDs$n_users))
-  flag_IDs <- flag_IDs %>% 
-    bind_rows(flagged)
-  
-  #add one to number of users
-  flag_IDs <- flag_IDs %>%
-    mutate(n_users = n_users + 1)
-  
-  #export
-  saveRDS(flag_IDs, file = "flags.RDS")
-}
+#add count and number of users columns 
+flagged <- flagged %>%
+  mutate(count = 1,
+         n_users = 1)
+
+#export
+saveRDS(flagged, file = "flags.RDS")
 
 
 # 4. Remove flagged individuals from tracks and flag in metadata
 
 #extract a vector of combined_IDs from flag_IDs where count >= 2
-removal_IDs <- flag_IDs %>% 
-  filter(count >= 2) %>%
+removal_IDs <- flagged %>%
   select(combined_IDs) %>%
   mutate(combined_IDs = as.character(combined_IDs)) %>%
   as.vector() %>%
@@ -149,7 +111,7 @@ tracks <- tracks %>%
 
 #flag metadata for individuals that have been flagged
 sp_meta <- sp_meta %>% 
-  mutate(keepornot = if_else(combined_IDs %in% removal_IDs & is.na(keepornot), "discard", "keep"))
+  mutate(keepornot = if_else(!combined_IDs %in% removal_IDs & is.na(keepornot), "keep", "discard"))
 
 #remove combined_IDs column from tracks and metadata
 tracks <- tracks %>% 
@@ -160,13 +122,17 @@ sp_meta <- sp_meta %>%
 
 # 5. Export dataframes
 
+#change datetime to date (to match RAATD 1.0)
+tracks <- tracks %>% 
+  rename(date = datetime)
+
 #export tracks 
 saveRDS(tracks, file = paste0(species_code, "_ssm_qc.RDS"))
 
 #replace keepornot column in meta with that from sp_meta
 meta <- meta %>%
   filter(abbreviated_name != species_code) %>%
-  mutate(keepornot = as.character()) %>%
+  mutate(keepornot = as.character(keepornot)) %>%
   bind_rows(sp_meta)
 
 #export updated metadata

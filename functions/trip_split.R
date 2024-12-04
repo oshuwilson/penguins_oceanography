@@ -1,29 +1,23 @@
 
 trip_split <- function(tracks, meta, buff.dist){
 
-#get deployment sites
-sites <- meta %>% 
-  dplyr::select(individual_id, deployment_decimal_latitude, deployment_decimal_longitude)
+#get colony locations
+sites <- meta %>%
+  dplyr::select(individual_id, device_id, deployment_decimal_latitude, deployment_decimal_longitude)
 
-#plot start points
-starts <- vect(sites, 
-               geom = c("deployment_decimal_longitude", "deployment_decimal_latitude"), 
-               crs = "epsg:4326")
-starts <- project(starts, "epsg:6932")
-
-#if content, choose the average start point
-colony_lon <- median(sites$deployment_decimal_longitude)
-colony_lat <- median(sites$deployment_decimal_latitude)
-colony <- as.data.frame(cbind(colony_lon, colony_lat))
+#find colony from IDs present in tracks
+colony <- sites %>%
+  filter(individual_id %in% tracks$individual_id) %>%
+  slice(1)
 
 #create buffer around colony - experiment with distance to decide on trip distance
-colony <- vect(colony, geom = c("colony_lon", "colony_lat"), crs = "epsg:4326")
+colony <- vect(colony, geom = c("deployment_decimal_longitude", "deployment_decimal_latitude"), crs = "epsg:4326")
 colony <- project(colony, "epsg:6932")
 buff <- buffer(colony, buff.dist)
 
 #create plot for visualising buffer
 p1 <- ggplot() + geom_spatvector(data = tracks, size = 0.5) +
-  geom_spatvector(data = starts, col = "red", size = 2) + 
+  geom_spatvector(data = colony, col = "red", size = 2) + 
   geom_spatvector(data = buff, alpha = 0, lwd = 1, col = "red") +
   theme_bw()
 
@@ -34,7 +28,7 @@ tracks <- tracks %>%
 #convert back to dataframe
 tracks <- as.data.frame(tracks, geom = "XY")
 
-#identify points where distance to colony is less than 10000m
+#identify points where distance to colony is less than buffer distance
 home_points <- tracks %>% 
   mutate(home = ifelse(dist_to_colony < buff.dist, 1, 0)) %>%
   filter(home == 1) %>%

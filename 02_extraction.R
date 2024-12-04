@@ -1,6 +1,5 @@
 #extract environmental variables for RSF
 #ADD FSLE
-#EDIT LEADS TO ONLY EXTRACT FOR WINTER MONTHS
 
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
@@ -16,8 +15,8 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 
 #define species site and stage
 this.species <- "ADPE"
-this.site <- "Pointe Geologie"
-this.stage <- "incubation"
+this.site <- "Ardley Island"
+this.stage <- "chick-rearing"
 
 #load in tracks and background data
 tracks <- readRDS(paste0("data/tracks/", this.species, "/", this.site, "/", this.stage, ".RDS"))
@@ -25,7 +24,7 @@ back <- readRDS(paste0("data/tracks/", this.species, "/", this.site, "/", this.s
 
 #combine the two datasets together
 tracks <- tracks %>%
-  rename(x = decimal_longitude, y = decimal_latitude) %>%
+  rename(x = lon, y = lat) %>%
   mutate(region = this.site, 
          pa = "presence")
 back <- back %>%
@@ -99,7 +98,17 @@ data$curr <- sqrt((data$uo^2) + (data$vo^2))
 data <- dynamic_extract("front_freq", data)
 
 #eddies
-data <- dynamic_extract("eddies", data)
+if(year(max(data$date)) > 2021){
+  sub_data <- data %>% 
+    filter(year(date) > 2021) %>%
+    mutate(eddies = NA)
+  data <- data %>% 
+    filter(year(date) <= 2021)
+  data <- dynamic_extract("eddies", data)
+  data <- bind_spat_rows(data, sub_data)
+} else{
+  data <- dynamic_extract("eddies", data)
+}
 
 #dist2ice
 data <- dynamic_extract("dist2ice", data)
@@ -116,5 +125,5 @@ rm(leads)
 data <- as.data.frame(data, geom = "XY")
 
 #export
-saveRDS(data, file = paste0("output/extractions/", this.species, "/", this.site, "/", this.stage, "_extracted.RDS"))
+saveRDS(data, file = paste0("output/extractions/", this.species, "/", this.site, "_", this.stage, "_extracted.RDS"))
 

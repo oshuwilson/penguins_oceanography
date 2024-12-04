@@ -5,7 +5,6 @@ rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 
 {
-  library(sf)
   library(terra)
   library(tidyverse)
 }
@@ -22,7 +21,7 @@ meta <- meta %>%
   filter(abbreviated_name == this.species)
 
 #create list of all regions
-regions <- c("Pointe Geologie")
+regions <- c("Ardley Island")
 
 #loop over all regions
 for(i in 1:length(regions)){
@@ -46,7 +45,7 @@ for(i in 1:length(regions)){
     
     #convert to terra
     tracks_terra <- tracks %>%
-      vect(geom = c("decimal_longitude", "decimal_latitude"),
+      vect(geom = c("lon", "lat"),
            crs = "epsg:4326")
     
     #visualise

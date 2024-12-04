@@ -21,7 +21,7 @@ rm(list=ls())
 ##------------------##
 
 # 1. Define Key Variables
-species_code <- "CHPE" #four letter RAATD species code
+species_code <- "KIPE" #four letter RAATD species code
 
 ##----------------##
 ## User Input End ##
@@ -43,93 +43,67 @@ vmax <- read_csv("~/OneDrive - University of Southampton/Documents/RAATD 2.0/Dat
   as.numeric()
 
 
+# 3. Split tracks where gaps exist longer than two days
+
+#calculate time difference
+tracks <- tracks %>% 
+  group_by(individual_id, device_id) %>%
+  arrange(individual_id, device_id, date) %>% 
+  mutate(lag_date = lag(date)) %>%
+  mutate(timediff = difftime(date, lag_date, units = "days"))
+
+#if time difference is greater than two days, begin new trip ID
+tracks <- tracks %>% 
+  mutate(timediff = ifelse(is.na(timediff), 0, as.numeric(timediff))) %>%
+  mutate(trip_id = cumsum(timediff > 2)) %>% 
+  ungroup()
+
 # 3. Argos State-Space-Modelling with aniMotum
 
 #if tracks are from different deployments on the same individual or vice versa, fit_ssm will fail
 #thus a merged device/individual id is used for the purpose of fit_ssm when available
 tracks <- tracks %>% 
-  mutate(id = as.factor(paste0(individual_id, "_", device_id))) 
+  mutate(id = as.factor(paste(individual_id, device_id, trip_id, sep = "_"))) 
 
-#split tracks by device_type before state-space modelling (different time steps for each)
-GPS <- tracks %>% 
-  filter(device_type == "GPS")
+#remove tracks with fewer than 10 locations
+tracks <- tracks %>% 
+  group_by(id) %>% 
+  filter(n() > 9) %>% 
+  ungroup()
 
-PTT <- tracks %>% 
-  filter(device_type == "PTT")
+#fit tracks 
+fit_trax <- fit_ssm(tracks,
+                    time.step = 1, #time sampling interval in hours
+                    vmax = vmax, #speed filter in m/s
+                    model="rw")
 
-GLS <- tracks %>%
-  filter(device_type == "GLS")
-
-#fit GPS tracks and reroute around land
-if(nrow(GPS) > 0){
-  fit_GPS <- fit_ssm(GPS,
-                     time.step = 1, #time sampling interval in hours
-                     vmax = vmax, #speed filter in m/s
-                     model="crw")
-  fit_GPS <- route_path(fit_GPS)
-}
-
-#repeat for PTT
-if(nrow(PTT) > 0){
-  fit_PTT <- fit_ssm(PTT,
-                     time.step = 2,
-                     vmax = vmax,
-                     model = "crw")
-  fit_PTT <- route_path(fit_PTT)
-}
-
-#repeat for GLS
-if(nrow(GLS) > 0){
-  fit_GLS <- fit_ssm(GLS,
-                     time.step = 12,
-                     vmax = vmax,
-                     model = "crw")
-  fit_GLS <- route_path(fit_GLS)
-}
-
+#reroute tracks around land
+fit_trax <- route_path(fit_trax)
 
 # 4. Individual SSM Validation Plots
 
 #source function
 source("~/OneDrive - University of Southampton/Documents/RAATD 2.0/Code/functions/qcplot.R")
 
-#GPS plots
-qcplot(fit = fit_GPS, 
+#quality control plots
+qcplot(fit = fit_trax, 
        spp = species_code, 
-       device_type = "GPS", 
+       device_type = "Mixed",  
        step_duration = 1)
-
-#PTT plots
-qcplot(fit = fit_PTT, 
-       spp = species_code, 
-       device_type = "PTT", 
-       step_duration = 2)
-
-#GLS plots
-qcplot(fit = fit_GLS,
-       spp = species_code,
-       device_type = "GLS",
-       step_duration = 12)
 
 
 # 5. Export SSM tracks
 
 #grab predicted locations from GPS fit
-GPS_ssm_tracks <- grab(fit_GPS, what = "predicted")
-PTT_ssm_tracks <- grab(fit_PTT, what = "predicted")
-GLS_ssm_tracks <- grab(fit_GLS, what = "predicted")
-
-#combine all together
-ssm_tracks <- rbind(get0("GPS_ssm_tracks"),
-                    get0("PTT_ssm_tracks"),
-                    get0("GLS_ssm_tracks"))
+ssm_tracks <- grab(fit_trax, what = "predicted")
 
 #join device ids with individual ids
 individuals <- tracks %>% 
-  select(id, individual_id, device_id) %>% 
+  select(id, individual_id, device_id, trip_id) %>% 
   group_by(id) %>% 
   summarise(individual_id = first(individual_id),
-            device_id = first(device_id))
+            device_id = first(device_id),
+            trip_id = first(trip_id))
 ssm_tracks <- ssm_tracks %>% left_join(individuals)
 
 #select important columns and standardise names
