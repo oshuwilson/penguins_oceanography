@@ -1,6 +1,8 @@
-#create background samples for penguins
+#-------------------------
+#create background samples 
+#-------------------------
 
-#RESAMPLE ALL TO A 2-HOUR STEP-LENGTH????
+#cleanup
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 
@@ -20,8 +22,15 @@ meta <- read.csv("~/OneDrive - University of Southampton/Documents/RAATD/RAATD_m
 meta <- meta %>% 
   filter(abbreviated_name == this.species)
 
-#create list of all regions
-regions <- c("Ardley Island")
+#read in species/region/stage info 
+srs <- read.csv("data/tracks/species_site_stage.csv")
+
+#filter to this species
+srs <- srs %>% 
+  filter(species == this.species)
+
+#list each region
+regions <- unique(srs$site)
 
 #loop over all regions
 for(i in 1:length(regions)){
@@ -30,15 +39,19 @@ for(i in 1:length(regions)){
   this.region <- regions[i]
   
   #list stage track files
-  files <- list.files(path = paste0("data/tracks/", this.species, "/", this.region, "/"),
+  files <- list.files(path = paste0("output/tracks/", this.species, "/"),
+                      pattern = paste0(this.region),
                       full.names = T)
-  stages <- list.files(path = paste0("data/tracks/", this.species, "/", this.region, "/"))
+  
+  #list each stage name
+  stages <- srs %>% 
+    filter(site == this.region) %>% 
+    pull(stage)
   
   #for each stage
   for(j in 1:length(stages)){
     stage_file <- files[j]
     stage_name <- stages[j]
-    stage_name <- tools::file_path_sans_ext(stage_name)
     
     #read in tracks
     tracks <- readRDS(stage_file)
@@ -77,7 +90,7 @@ for(i in 1:length(regions)){
              region = this.region)
     
     #export 
-    saveRDS(back, file = paste0("data/tracks/", this.species, "/", this.region, "/", stage_name, "_background.RDS"))
+    saveRDS(back, file = paste0("output/background/", this.species, "/", this.region, "_", stage_name, "_background.RDS"))
     
     #print completion
     print(paste0(this.region, " ", stage_name, " completed"))

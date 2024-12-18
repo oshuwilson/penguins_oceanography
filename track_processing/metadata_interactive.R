@@ -11,10 +11,10 @@ rm(list=setdiff(ls(), "coast"))
 source("~/OneDrive - University of Southampton/Documents/RAATD 2.0/Code/metadata_pt1.R")
 
 #format initial columns - datetime, individual_id, and lat/lon
-tracks <- tracks %>% select(time, lat, lon, ptt)
-tracks$datetime <- as_datetime(tracks$time, format = "%d/%m/%Y %H:%M")
-tracks$individual_id <- as.factor(tracks$ptt)
-tracks <- tracks %>% rename(lat = lat, lon = lon)
+tracks <- tracks %>% select(Datetime, Latitude, Longitude, individual_id)
+tracks$datetime <- as_datetime(tracks$Datetime, format = "%d/%m/%Y %H:%M")
+tracks$individual_id <- as.factor(tracks$individual_id)
+tracks <- tracks %>% rename(lat = Latitude, lon = Longitude)
 
 # second part of metadata processing
 source("~/OneDrive - University of Southampton/Documents/RAATD 2.0/Code/metadata_pt2.R")
@@ -35,9 +35,9 @@ source("~/OneDrive - University of Southampton/Documents/RAATD 2.0/Code/metadata
 
 #keep and rename relevant columns
 ext_meta <- ext_meta %>% 
-  select(Argos, Nom) %>%
-  rename(device_id = Nom) %>%
-  mutate(individual_id = as.factor(Argos))
+  rename(device_id = GPS) %>%
+  mutate(individual_id = as.factor(GPS_FILE_NAME)) %>%
+  select(device_id, individual_id)
 
 #if device_id not available, define as study code followed by numbers
 if(!exists("device_id", where = ext_meta)){

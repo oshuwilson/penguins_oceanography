@@ -14,7 +14,7 @@ rm(list=ls())
 ##------------------##
 
 # 1. Define Key Variables
-species_code <- "KIPE" #four letter RAATD species code
+species_code <- "MAPE" #four letter RAATD species code
 
 ##----------------##
 ## User Input End ##
@@ -48,10 +48,10 @@ if(exists("flag_IDs")){
 # 3. Flag individuals with erroneous tracks
 
 #define individual IDs flagged for removal
-ind_flag <- c("165150")
+ind_flag <- c("MP03_KD_DEC_2015")
 
 #define corresponding device IDs flagged for removal - MUST BE SAME ORDER AS INDIVIDUAL IDs
-dev_flag <- c("165150")
+dev_flag <- c("1534_MP03_KD_DEC_2015_92406")
 
 ##----------------##
 ## User Input End ##
@@ -109,9 +109,16 @@ tracks <- tracks %>%
 tracks <- tracks %>% 
   filter(!combined_IDs %in% removal_IDs)
 
-#flag metadata for individuals that have been flagged
+#identify remaining IDs
+remaining_IDs <- tracks %>%
+  mutate(combined_IDs = as.character(combined_IDs)) %>%
+  select(combined_IDs) %>%
+  distinct() %>%
+  pull(combined_IDs)
+
+#change final keepornot column
 sp_meta <- sp_meta %>% 
-  mutate(keepornot = if_else(!combined_IDs %in% removal_IDs & is.na(keepornot), "keep", "discard"))
+  mutate(keepornot = if_else(combined_IDs %in% remaining_IDs, "keep", "discard"))
 
 #remove combined_IDs column from tracks and metadata
 tracks <- tracks %>% 

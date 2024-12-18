@@ -21,7 +21,7 @@ rm(list=ls())
 ##------------------##
 
 # 1. Define Key Variables
-species_code <- "KIPE" #four letter RAATD species code
+species_code <- "ADPE" #four letter RAATD species code
 
 ##----------------##
 ## User Input End ##
@@ -75,7 +75,7 @@ tracks <- tracks %>%
 fit_trax <- fit_ssm(tracks,
                     time.step = 1, #time sampling interval in hours
                     vmax = vmax, #speed filter in m/s
-                    model="rw")
+                    model="crw")
 
 #reroute tracks around land
 fit_trax <- route_path(fit_trax)

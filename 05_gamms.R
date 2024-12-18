@@ -14,8 +14,8 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 
 # define species site and stage
 this.species <- "KIPE"
-this.site <- "Marion"
-this.stage <- "chick-rearing"
+this.site <- "Macquarie"
+this.stage <- "incubation"
 
 # Load the extracted state tracks
 tracks <- readRDS(paste0("output/hmm/hmm_tracks/", this.species, "_", this.site, "_", this.stage, "_tracks_checked.rds"))
