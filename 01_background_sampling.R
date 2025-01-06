@@ -14,8 +14,9 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 #set species
 this.species <- "ADPE"
 
-#read in oceans file and metadata
+#read in oceans and coast files for masking
 oceans <- readRDS("data/oceans_vect.RDS")
+coast <- readRDS("data/coast_vect.RDS")
 
 #read in metadata and filter to this species
 meta <- read.csv("~/OneDrive - University of Southampton/Documents/RAATD/RAATD_metadata.csv")
@@ -61,6 +62,11 @@ for(i in 1:length(regions)){
       vect(geom = c("lon", "lat"),
            crs = "epsg:4326")
     
+    #if lon spans -180/180, project to stereographic view
+    if(min(tracks$lon) < -175 & max(tracks$lon) > 175){
+      tracks_terra <- project(tracks_terra, "epsg:6932")
+    }
+    
     #visualise
     plot(tracks_terra, pch =".")
     
@@ -71,15 +77,22 @@ for(i in 1:length(regions)){
     #buffer to prevent self intersection error
     mch <- buffer(mch, 0)
     
-    #intersect mch with oceans to avoid sampling on land
-    mask <- terra::intersect(mch, oceans)
+    #if in polar projection, use coastfile for masking
+    if(min(tracks$lon) < -175 & max(tracks$lon) > 175){
+      mask <- erase(mch, coast)
+    } else {
+      mask <- terra::intersect(mch, oceans)
+    }
     plot(mask)
-    
+
     #create background points
     back <- spatSample(mask, size = nrow(tracks))
     plot(back, pch = ".", add = T)
     
     #convert to dataframe
+    if(min(tracks$lon) < -175 & max(tracks$lon) > 175){
+      back <- project(back, "epsg:4326")
+    } 
     back <- as.data.frame(back, geom = "XY")
     back <- back %>% select(x, y)
     

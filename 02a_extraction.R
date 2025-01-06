@@ -15,7 +15,7 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 # 1. Setup
 
 #define species
-this.species <- "ADPE"
+this.species <- "KIPE"
 
 #load in species/region/stage info for this species
 srs <- read.csv("data/tracks/species_site_stage.csv")
@@ -134,15 +134,18 @@ for(this.site in regions){
     leads <- rast("E:/Satellite_Data/static/leads/leads_resampled.nc")
     data$leads <- extract(leads, data, ID=F)
     data <- data %>%
-      mutate(leads = ifelse(month(date) %in% c(4, 5, 6, 7, 8, 9, 10), leads, NA))
+      mutate(leads = ifelse(month(date) %in% c(4, 5, 6, 7, 8, 9, 10, 11) &
+                              year(date) %in% 2002:2019, leads, NA))
     rm(leads)
     print("leads")
     
     #polynyas
+    if(this.species %in% c("ADPE", "EMPE", "CHPE")){
     warp <- project(data, "epsg:3412")
     warp <- dynamic_extract("polynyas", warp)
     data <- project(warp, crs(data))
     print("polynyas")
+    }
     
     
     # 3. Format for export

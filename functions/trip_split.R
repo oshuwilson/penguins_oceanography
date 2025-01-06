@@ -12,7 +12,7 @@ colony <- sites %>%
 
 #create buffer around colony - experiment with distance to decide on trip distance
 colony <- vect(colony, geom = c("deployment_decimal_longitude", "deployment_decimal_latitude"), crs = "epsg:4326")
-colony <- project(colony, "epsg:6932")
+colony <- project(colony, crs(tracks))
 buff <- buffer(colony, buff.dist)
 
 #create plot for visualising buffer
