@@ -15,8 +15,8 @@ rm(list=setdiff(ls(), "coast"))
 # 1. Read in and format track dataframe
 
 #set species, study and colony/region code
-species_code <- "ADPE"
-study_code <- "ADPE_CEBC_PG"
+species_code <- "EMPE"
+study_code <- "Colbeck_2013"
 
 #check that study hasn't already been processed before beginning
 all_meta <- readRDS("~/OneDrive - University of Southampton/Documents/RAATD 2.0/Metadata/RAATD_2_Metadata.RDS")
@@ -52,7 +52,7 @@ if(onefile == FALSE){
 }
 
 #format initial columns - datetime, individual_id, and lat/lon
-tracks$datetime <- as_datetime(tracks$datetime)
+tracks$datetime <- as_datetime(paste(tracks$date, tracks$time, sep = " "))
 tracks$individual_id <- as.factor(tracks$individual_id)
 tracks <- tracks %>% rename(lat = lat, lon = lon)
 
@@ -117,18 +117,18 @@ rm(names)
 
 ### sex, age_class ###
 #sex
-#meta$sex <- "unknown"
+meta$sex <- "unknown"
 
-meta <- meta %>% 
-  left_join(select(ext_meta, individual_id, sex)) %>%
-  distinct(individual_id, .keep_all = T)
-meta <- meta %>%
-  mutate(sex = case_match(sex,
-         "M" ~ "male",
-         "F" ~ "female", 
-         "" ~ "unknown"))
-meta <- meta %>% 
-  mutate(sex = if_else(is.na(sex), "unknown", sex))
+# meta <- meta %>% 
+#   left_join(select(ext_meta, individual_id, sex)) %>%
+#   distinct(individual_id, .keep_all = T)
+# meta <- meta %>%
+#   mutate(sex = case_match(sex,
+#          "M" ~ "male",
+#          "F" ~ "female", 
+#          "" ~ "unknown"))
+# meta <- meta %>% 
+#   mutate(sex = if_else(is.na(sex), "unknown", sex))
 
 #check that sex is either male, female, or NA
 poss_sexes <- c("male", "female", "unknown")
@@ -161,7 +161,7 @@ rm(invalid, poss_ages)
 ### device_type ###
 
 #device_type - if in ext_meta
-meta$device_type <- "GPS"
+meta$device_type <- "PTT"
 
 #check that device_type has been saved as GPS, PTT, or GLS
 poss_devices <- c("GPS", "PTT", "GLS")
@@ -177,12 +177,12 @@ rm(invalid, poss_devices)
 
 
 ### deployment_site ###
-meta$deployment_site <- "Pointe Geologie"
+meta$deployment_site <- "Cape Colbeck, Ross Sea"
 
 
 ### deployment date, time, and lat/lon ###
-meta$deployment_decimal_latitude <- -66.66667
-meta$deployment_decimal_longitude <- 140.01667
+meta$deployment_decimal_latitude <- -77.135
+meta$deployment_decimal_longitude <- -157.730
 
 #if date, time, and/or lat/lons are not in ext_meta, use first point for each device_ID, but exercise caution
 if(!exists("ext_meta")){
@@ -232,8 +232,8 @@ if(!exists("deployment_date", where = ext_meta) | !exists("deployment_lat", wher
 }
 
 ### data contact and email ###
-meta$data_contact <- "Akiko Kato"
-meta$contact_email <- "akiko.k.r@gmail.com"
+meta$data_contact <- "Kim Goetz"
+meta$contact_email <- "kim.goetz@noaa.gov"
 
 
 ### split tracks into separate files and store filenames ###

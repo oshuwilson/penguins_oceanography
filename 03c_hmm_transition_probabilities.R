@@ -1,12 +1,67 @@
-# 3. Incorporate covariates to see covariate effects
+#-------------------------------------------------------------
+# Refit HMMs with environmental State Transition Probabilities
+#-------------------------------------------------------------
 
-#vars of interest
-vars <- c("depth", "slope", "dshelf", "sst", "mld", "sal", "ssh", "curr", "front_freq", "eddies",
-          "dist2ice", "leads", "sic")
+#add random effects???
+
+rm(list=ls())
+setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
+
+{
+  library(moveHMM)
+  library(hmmTMB)
+  library(terra)
+  library(tidyterra)
+  library(tidyverse)
+  library(miceRanger)
+}
+
+#prioritise dplyr select
+select <- dplyr::select
+
+
+# 1. Data preparation
+
+#set species
+this.species <- "KIPE"
+
+#read in species, region, and stage info 
+srs <- read.csv("data/tracks/species_site_stage.csv")
+srs <- srs %>%
+  filter(species == this.species)
+
+#set region
+regions <- unique(srs$site)
+this.site <- regions[1]
+
+#set stage
+stages <- srs %>% 
+  filter(site == this.site) %>% 
+  pull(stage)
+this.stage <- stages[2]
+
+#read in HMM quality controlled tracks
+tracks <- readRDS(paste0("output/hmm/hmm_tracks/", this.species, "/", this.site, "_", this.stage, "_tracks_checked.rds"))
+
+#read in par0 values
+par0 <- readRDS(paste0("output/hmm/hmm_pars/", this.species, "/", this.site, "_", this.stage, "_par0.rds"))
+
+#convert ID to factor
+tracks$ID <- as.factor(tracks$ID)
+
+
+# 2. Incorporate covariates into HMM
+
+#vars of interest - oceanographic only for subantarctic, complete for antarctic
+if(this.species %in% c("KIPE", "MAPE")){ 
+  vars <- c("depth", "mld", "ssh", "curr", "front_freq", "eddies", "fsle")
+} else {
+  vars <- c("depth", "mld", "ssh", "curr", "front_freq", "eddies", "fsle", "leads", "sic", "dist2ice", "polynyas")
+}
 
 #isolate predictors for imputation
-preds <- trax %>%
-  dplyr::select(all_of(vars))
+preds <- tracks %>%
+  select(all_of(vars))
 
 #impute missing covariate values
 if(sum(is.na(preds)) > 0){
@@ -14,11 +69,14 @@ if(sum(is.na(preds)) > 0){
   preds <- completeData(imp)[[1]]
   
   #re-add imputed data
-  trax <- trax %>% 
-    dplyr::select(-all_of(vars)) %>%
+  tracks <- tracks %>% 
+    select(-all_of(vars)) %>%
     bind_cols(preds)
 }
 
+#only keep variables of interest and other key columns
+trax <- tracks %>%
+  select(ID, individual_id, x, y, date, swim_speed, all_of(vars))
 
 #re-prep data
 data <- prepData(trax, 
@@ -26,51 +84,66 @@ data <- prepData(trax,
                  coordNames = c("x", "y"), #co-ordinate column names
 )
 
-#shift covariates up by one index to align with steps and angles
+#shift covariates up by one index to align with turning angles
 shift_up <- function(col){
   c(col[-1], NA)
 }
-trax <- trax %>%
+data <- data %>%
   mutate(across(all_of(vars), shift_up))
 
 
-# 5. Fit HMM with best formula and par0 values
+# 3. Fit HMM with best formula and par0 values
 
-#formula for oceanographic covariates
-fixed_formula <- ~ front_freq + s(eddies, k = 5, bs = "ts") + curr +
-  s(ID, bs = "re") + s(ID, by = front_freq, bs = "re") + 
-  s(ID, by = eddies, bs = "re") + s(ID, by = curr, bs = "re")
-
-#formula for sea ice covariates
-ice_formula <- ~ leads + s(dist2ice, k = 5, bs = "ts") + s(sic, k = 5, bs = "ts") + 
-  s(ID, bs = "re") + s(ID, by = leads, bs = "re") + 
-  s(ID, by = dist2ice, bs = "re") + s(ID, by = sic, bs = "re")
+#set formula for subantarctic and antarctic species
+if(this.species %in% c("KIPE", "MAPE")){
+  formula <- ~ front_freq + s(eddies, k = 5, bs = "ts") + curr + fsle + 
+    s(depth, k = 5, bs = "ts") + s(mld, k = 5, bs = "ts") + s(ssh, k = 5, bs = "ts") +
+    s(individual_id, bs = "re") + s(individual_id, by = front_freq, bs = "re") + 
+    s(individual_id, by = eddies, bs = "re") + s(individual_id, by = curr, bs = "re") +
+    s(individual_id, by = fsle, bs = "re") + s(individual_id, by = depth, bs = "re") +
+    s(individual_id, by = mld, bs = "re") + s(individual_id, by = ssh, bs = "re")
+} else {
+  formula <- ~ front_freq + s(eddies, k = 5, bs = "ts") + curr + fsle + 
+    s(depth, k = 5, bs = "ts") + s(mld, k = 5, bs = "ts") + s(ssh, k = 5, bs = "ts") + 
+    leads + s(sic, k = 5, bs = "ts") + s(dist2ice, k = 5, bs = "ts") + polynyas +
+    s(individual_id, bs = "re")
+}
 
 #new hidden process model
-hid3 <- MarkovChain$new(data = data, n_states = 2, formula = ice_formula)
+hid3 <- MarkovChain$new(data = data, n_states = 2, formula = formula, 
+                        initial_state = 2)
+
+#set distributions of observed variables
+dists <- list(swim_speed = "gamma2", angle = "vm")
 
 #new observation model
 obs3 <- Observation$new(data = data, dists = dists, par = par0, n_states = 2)
 
 #create and fit HMM
-hmm3 <- HMM$new(obs = obs3, hid = hid3, init = top_hmm)
-hmm3$fit(silent = TRUE)
+set.seed(777)
+hmm3 <- HMM$new(obs = obs3, hid = hid3)
+hmm3$fit(silent = T)
 
-#plot step length and angle distributions
-step_lengths <- hmm3$plot_dist("step")
-angles <- hmm3$plot_dist("angle")
+
+# 4. Plotting transition probability matrices 
 
 #plot tracks
 hmm_tracks <- hmm3$plot_ts("x", "y") + coord_equal()
 
 #plot covariate effects
 curr <- hmm3$plot("tpm", var = "curr")
-frfr <- hmm3$plot("tpm", var = "front_freq")
+front <- hmm3$plot("tpm", var = "front_freq")
 edd <- hmm3$plot("tpm", var = "eddies")
-leads <- hmm3$plot("tpm", var = "leads")
-sic <- hmm3$plot("tpm", var = "sic")
-dist2ice <- hmm3$plot("tpm", var = "dist2ice")
-
+fsle <- hmm3$plot("tpm", var = "fsle")
+depth <- hmm3$plot("tpm", var = "depth")
+mld <- hmm3$plot("tpm", var = "mld")
+ssh <- hmm3$plot("tpm", var = "ssh")
+if(this.species %in% c("ADPE", "CHPE", "EMPE")){
+  leads <- hmm3$plot("tpm", var = "leads")
+  sic <- hmm3$plot("tpm", var = "sic")
+  dist2ice <- hmm3$plot("tpm", var = "dist2ice")
+  polynya <- hmm3$plot("tpm", var = "polynyas")
+}
 
 #fit viterbi states to tracks
 viterbi <- hmm3$viterbi()
@@ -81,21 +154,6 @@ trax <- trax %>%
 
 
 # 6. Export
-
-longname <- "Adelie Penguins"
-
-#graph formatting
-step_lengths <- step_lengths + 
-  scale_color_manual("", values = c("darkred", "steelblue4", "black"), labels = c("ARS", "Transit", "Total")) +
-  scale_linetype_manual("", values = c(1, 1, 3), labels = c("ARS", "Transit", "Total")) +
-  ggtitle(paste0("Step Lengths for ", longname, " at ", this.site, " (", this.stage, ")")) + 
-  xlab("Step Length (m)") + ylab("Density")
-
-angles <- angles + 
-  scale_color_manual("", values = c("darkred", "steelblue4", "black"), labels = c("ARS", "Transit", "Total")) +
-  scale_linetype_manual("", values = c(1, 1, 3), labels = c("ARS", "Transit", "Total")) +
-  ggtitle(paste0("Turning Angles for ", longname, " at ", this.site, " (", this.stage, ")")) + 
-  xlab("Turning Angle (radians)") + ylab("Density")
 
 hmm_tracks <- hmm_tracks + 
   scale_color_manual("", values = c("red3", "steelblue4"), labels = c("ARS", "Transit")) +

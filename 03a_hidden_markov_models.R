@@ -1,6 +1,6 @@
-#-------------------------------------------------------------------
-#Fit hidden markov models for quality control and initial parameters
-#-------------------------------------------------------------------
+#--------------------------------------------------------------------
+# Fit hidden markov models for quality control and initial parameters
+#--------------------------------------------------------------------
 
 rm(list = ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
@@ -42,7 +42,7 @@ for(this.site in regions){
   for(this.stage in stages){
 
     #read in tracks
-    tracks <- readRDS(file = paste0("output/extractions/", this.species, "/", this.site, "_", this.stage, "_extracted.rds"))
+    tracks <- readRDS(file = paste0("output/extractions/fsle/", this.species, "/", this.site, "_", this.stage, "_extracted_with_fsle.rds"))
     tracks <- tracks %>% 
       filter(pa == "presence")
     
