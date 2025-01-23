@@ -12,16 +12,11 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 }
 
 #set species
-this.species <- "ADPE"
+this.species <- "CHPE"
 
 #read in oceans and coast files for masking
 oceans <- readRDS("data/oceans_vect.RDS")
 coast <- readRDS("data/coast_vect.RDS")
-
-#read in metadata and filter to this species
-meta <- read.csv("~/OneDrive - University of Southampton/Documents/RAATD/RAATD_metadata.csv")
-meta <- meta %>% 
-  filter(abbreviated_name == this.species)
 
 #read in species/region/stage info 
 srs <- read.csv("data/tracks/species_site_stage.csv")
@@ -39,23 +34,16 @@ for(i in 1:length(regions)){
   #define region
   this.region <- regions[i]
   
-  #list stage track files
-  files <- list.files(path = paste0("output/tracks/", this.species, "/"),
-                      pattern = paste0(this.region),
-                      full.names = T)
-  
   #list each stage name
   stages <- srs %>% 
     filter(site == this.region) %>% 
     pull(stage)
   
   #for each stage
-  for(j in 1:length(stages)){
-    stage_file <- files[j]
-    stage_name <- stages[j]
-    
+  for(j in stages){
+
     #read in tracks
-    tracks <- readRDS(stage_file)
+    tracks <- readRDS(paste0("output/tracks/", this.species, "/", this.region, " ", j, " tracks.RDS"))
     
     #convert to terra
     tracks_terra <- tracks %>%
@@ -103,9 +91,9 @@ for(i in 1:length(regions)){
              region = this.region)
     
     #export 
-    saveRDS(back, file = paste0("output/background/", this.species, "/", this.region, "_", stage_name, "_background.RDS"))
+    saveRDS(back, file = paste0("output/background/", this.species, "/", this.region, "_", j, "_background.RDS"))
     
     #print completion
-    print(paste0(this.region, " ", stage_name, " completed"))
+    print(paste0(this.region, " ", j, " completed"))
   }
 }

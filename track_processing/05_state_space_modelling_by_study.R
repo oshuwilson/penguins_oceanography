@@ -19,8 +19,8 @@ rm(list=ls())
 ##------------------##
 
 # 1. Define Key Variables
-species_code <- "KIPE" #four letter RAATD species code
-study_code <- "CNRS_Kerguelen"
+species_code <- "CHPE" #four letter RAATD species code
+study_code <- "NIPR_King_George"
 
 ##----------------##
 ## User Input End ##

@@ -11,14 +11,14 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02/")
 }
 
 #read in coastline
-coast <- vect(load_Coastline())
+coast <- readRDS("data/coast_vect.RDS")
 
 #define species and study
-this.species <- "KIPE"
-this.study <- "CNRS_Kerguelen"
+this.species <- "EMPE"
+this.study <- "Colbeck_2013"
 
 #read in ssm_tracks and metadata for this species and study
-tracks <- readRDS(paste0("data/ssm_tracks/", this.species, "_ssm_qc.RDS"))
+tracks <- readRDS(paste0("data/tracks/", this.species, "/all_tracks.RDS"))
 meta <- readRDS("~/OneDrive - University of Southampton/Documents/RAATD 2.0/Metadata/RAATD_2_Metadata.RDS")
 meta <- meta %>% 
   filter(abbreviated_name == this.species & 

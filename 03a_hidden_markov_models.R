@@ -22,7 +22,7 @@ select <- dplyr::select
 # 1. Data preparation
 
 #define variables
-this.species <- "KIPE"
+this.species <- "CHPE"
 
 #read in species, region, and stage info 
 srs <- read.csv("data/tracks/species_site_stage.csv")
@@ -42,7 +42,7 @@ for(this.site in regions){
   for(this.stage in stages){
 
     #read in tracks
-    tracks <- readRDS(file = paste0("output/extractions/fsle/", this.species, "/", this.site, "_", this.stage, "_extracted_with_fsle.rds"))
+    tracks <- readRDS(file = paste0("output/extractions/", this.species, "/", this.site, "_", this.stage, "_extracted.rds"))
     tracks <- tracks %>% 
       filter(pa == "presence")
     
@@ -210,7 +210,7 @@ for(this.site in regions){
     
     top_model <- all_llk %>% 
       arrange(desc(loglike)) %>%
-      slice(1) %>%
+      slice(10) %>%
       pull(iteration)
     
     #get corresponding best HMM to use par0s later

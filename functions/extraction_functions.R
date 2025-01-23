@@ -71,7 +71,7 @@ dynamic_extract <- function(predictor, tracks){
     }
     
     tracks_extracted <- rbind(tracks_extracted, xtractions) #bind together all years
-    
+    rm(pred) #remove pred to maintain next statement
   }
   
   #remove yday column for next predictor to work

@@ -15,7 +15,7 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 # 1. Setup
 
 #define species
-this.species <- "KIPE"
+this.species <- "CHPE"
 
 #load in species/region/stage info for this species
 srs <- read.csv("data/tracks/species_site_stage.csv")
