@@ -22,8 +22,8 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 # 1. Setup
 
 # define species
-this.species <- "MAPE"
-longname <- "Macaroni Penguin"
+this.species <- "EMPE"
+longname <- "Emperor Penguin"
 
 # read in species/site/stage info
 srs <- read.csv("data/tracks/species_site_stage.csv")
@@ -43,7 +43,7 @@ coast <- readRDS("data/coast_vect.RDS")
 regions <- unique(srs$site)
 
 # loop over each region
-this.site <- regions[1]
+for(this.site in regions){
 
 # identify stages for this region
 stages <- srs %>% 
@@ -51,7 +51,7 @@ stages <- srs %>%
   pull(stage)
 
 # loop over each stage
-this.stage <- stages[1]
+for(this.stage in stages){
 
 
 # 2. Process tracks for histograms
@@ -123,10 +123,61 @@ original <- original %>%
 # crop coast to track extent
 crop_coast <- crop(coast, ext(original))
 
+# project coast and tracks to lat/lon
+original <- project(original, "epsg:4326")
+crop_coast <- project(crop_coast, "epsg:4326")
+
+# find the average yday and year of tracks
+dates <- unique(as_date(original$date))
+years <- unique(year(original$date))
+
+# get current data (vo and uo) for all years
+for(year in years){
+  try(uo <- rast(paste0("E:/Satellite_Data/daily/uo/uo_", year, ".nc")))
+  try(vo <- rast(paste0("E:/Satellite_Data/daily/vo/vo_", year, ".nc")))
+  
+  # if no vo or uo for this year, skip
+  if(!exists("uo") | !exists("vo")){
+    years <- years[years != year]
+    next
+  }
+  
+  # limit to dates in tracks
+  uo <- uo[[time(uo) %in% dates]]
+  vo <- vo[[time(vo) %in% dates]]
+  
+  # crop to extent of tracks 
+  uo <- crop(uo, ext(original) + c(2, 2, 2, 2))
+  vo <- crop(vo, ext(original) + c(2, 2, 2, 2))
+  
+  # calculate current layer
+  curr <- sqrt(uo^2 + vo^2)
+
+  # join to other years
+  if(year == years[1]){
+    current <- curr
+  } else {
+    current <- c(current, curr)
+  }
+  
+  #reset
+  rm(uo, vo, curr)
+}
+
+# calculate average current speed
+current <- mean(current)
+
 # plot coast and tracks
 p1 <- ggplot() +
+  geom_spatraster(data = current) +
   geom_spatvector(data = crop_coast, fill = "grey") + 
-  geom_spatvector(data = original, size = 0.5) 
+  geom_spatvector(data = original, size = 0.5, col = "black") +
+  theme_classic() +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  labs(fill = "Mean Current Velocity (m/s)") +
+  theme(legend.position = "top") +
+  scale_fill_continuous(guide = guide_colorbar(frame.colour = "black", ticks.colour = "black"))
 p1
 
 
@@ -240,3 +291,15 @@ title <- ggdraw() +
 #all together
 final <- plot_grid(title, layout, nrow = 2, rel_heights = c(1, 20))
 final
+
+# export 
+ggsave(paste0("output/imagery/colony plots/", this.species, "/", this.site, "_", this.stage, ".svg"), final, 
+       width = 9, height = 8, units = "in", dpi = 300,
+       create.dir = T)
+
+# print completion
+print(paste0("Completed ", this.site, " ", this.stage))
+
+}
+}
+

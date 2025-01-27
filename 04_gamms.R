@@ -42,8 +42,8 @@ pred_gam <- function(polynyas){
 # 1. Data Preparation
 
 # define species
-this.species <- "MAPE"
-longname <- "Macaroni Penguin"
+this.species <- "EMPE"
+longname <- "Emperor Penguin"
 
 # read in species, region, and stage info
 srs <- read.csv("data/tracks/species_site_stage.csv")
@@ -122,12 +122,19 @@ for(this.stage in stages){
     # 2. Fit GAMMs
     
     #list of all possible covariates
-    allvars <- c("ed2", "curr", "front_freq", #"depth", "ssh", "mld",
-              "dist2ice", "polynyas", "leads", "sic")
+    #allvars <- c("ed2", "curr", "front_freq", #"depth", "ssh", "mld",
+    #          "dist2ice", "polynyas", "leads", "sic")
+    
+    allvars <- c("ed2", "curr", "front_freq")
     
     #if KIPE or MAPE, remove cryosphere covariates
     if(this.species %in% c("MAPE", "KIPE")){
-      allvars <- c("ed2", "curr", "depth", "ssh", "mld", "front_freq")
+      allvars <- c("ed2", "curr", "front_freq")
+    }
+    
+    #if CHPE, remove most cryosphere covariates
+    if(this.species %in% c("ADPE", "CHPE")){
+      allvars <- c("ed2", "curr", "front_freq")
     }
     
     #find covariates with too little variation for modelling (fewer than 6 unique values)
@@ -316,68 +323,8 @@ for(this.stage in stages){
     theme(legend.position = "top") +
     ggtitle(paste0(longname, "s (", this.stage, ")"))
   
-  # # depth data
-  # depths <- smooths %>%
-  #   select(.estimate, .se, .lower_ci, .upper_ci, depth, site, stage) %>%
-  #   filter(!is.na(depth) & 
-  #            stage == this.stage)
-  # 
-  # # depth plot
-  # depthplot <- ggplot(depths, aes(x = depth, y = .estimate)) +
-  #   geom_line(aes(col = site)) +
-  #   geom_ribbon(aes(ymin = .lower_ci, ymax = .upper_ci, fill = site), alpha = 0.2) +
-  #   theme_classic() +
-  #   scale_x_continuous(expand = c(0,0)) +
-  #   scale_color_viridis_d(end = 0.9) +
-  #   scale_fill_viridis_d(end = 0.9) +
-  #   labs(x = "Depth (m)", 
-  #        y = "Probability of ARS",
-  #        fill = "", col = "") +
-  #   theme(legend.position = "top") +
-  #   ggtitle(paste0(longname, "s (", this.stage, ")"))
-  # 
-  # # ssh data
-  # sshs <- smooths %>%
-  #   select(.estimate, .se, .lower_ci, .upper_ci, ssh, site, stage) %>%
-  #   filter(!is.na(ssh) &
-  #            stage == this.stage)
-  # 
-  # # ssh plot
-  # sshplot <- ggplot(sshs, aes(x = ssh, y = .estimate)) +
-  #   geom_line(aes(col = site)) +
-  #   geom_ribbon(aes(ymin = .lower_ci, ymax = .upper_ci, fill = site), alpha = 0.2) +
-  #   theme_classic() +
-  #   scale_x_continuous(expand = c(0,0)) +
-  #   scale_color_viridis_d(end = 0.9) +
-  #   scale_fill_viridis_d(end = 0.9) +
-  #   labs(x = "Sea Surface Height (m)", 
-  #        y = "Probability of ARS",
-  #        fill = "", col = "") +
-  #   theme(legend.position = "top") +
-  #   ggtitle(paste0(longname, "s (", this.stage, ")"))
-  # 
-  # # mld data
-  # mlds <- smooths %>%
-  #   select(.estimate, .se, .lower_ci, .upper_ci, mld, site, stage) %>%
-  #   filter(!is.na(mld) &
-  #            stage == this.stage)
-  # 
-  # # mld plot
-  # mldplot <- ggplot(mlds, aes(x = mld, y = .estimate)) +
-  #   geom_line(aes(col = site)) +
-  #   geom_ribbon(aes(ymin = .lower_ci, ymax = .upper_ci, fill = site), alpha = 0.2) +
-  #   theme_classic() +
-  #   scale_x_continuous(expand = c(0,0)) +
-  #   scale_color_viridis_d(end = 0.9) +
-  #   scale_fill_viridis_d(end = 0.9) +
-  #   labs(x = "Mixed Layer Depth (m)", 
-  #        y = "Probability of ARS",
-  #        fill = "", col = "") +
-  #   theme(legend.position = "top") +
-  #   ggtitle(paste0(longname, "s (", this.stage, ")"))
-  
   # dist2ice data
-  if(this.species %in% c("ADPE", "CHPE", "EMPE")){
+  if(this.species %in% c("PEPEPEPE")){
     if(sum(is.na(smooths$dist2ice)) != nrow(smooths)){
     dist2ices <- smooths %>%
       select(.estimate, .se, .lower_ci, .upper_ci, dist2ice, site, stage) %>%
@@ -473,12 +420,6 @@ for(this.stage in stages){
          plot = eddyplot, width = 8, height = 6)
   ggsave(filename = paste0("output/gamms/plots/", this.species, "/currents_", this.stage, ".png"),
          plot = currplot, width = 8, height = 6)
-  # ggsave(filename = paste0("output/gamms/plots/", this.species, "/depths_", this.stage, ".png"),
-  #        plot = depthplot, width = 8, height = 6)
-  # ggsave(filename = paste0("output/gamms/plots/", this.species, "/sshs_", this.stage, ".png"),
-  #        plot = sshplot, width = 8, height = 6)
-  # ggsave(filename = paste0("output/gamms/plots/", this.species, "/mlds_", this.stage, ".png"),
-  #        plot = mldplot, width = 8, height = 6)
   if(exists("dist2iceplot")){
     ggsave(filename = paste0("output/gamms/plots/", this.species, "/dist2ices_", this.stage, ".png"),
            plot = dist2iceplot, width = 8, height = 6)
@@ -502,3 +443,4 @@ saveRDS(smooths, paste0("output/gamms/smooths/", this.species, "_smooths.rds"))
 
 #export 
 saveRDS(pvalues, paste0("output/gamms/pvalues/", this.species, "_pvalues.rds"))
+
