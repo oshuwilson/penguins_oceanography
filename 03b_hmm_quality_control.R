@@ -10,9 +10,9 @@ library(tidyverse)
 rm(list=ls())
 
 # define species, site, and stage
-this.species <- "CHPE"
-this.site <- "South Shetland"
-this.stage <- "post-moult"
+this.species <- "EMPE"
+this.site <- "Rothschild Island"
+this.stage <- "post-breeding"
 
 # read in state-assigned tracks
 tracks <- readRDS(file = paste0("output/hmm/hmm_tracks/", this.species, "/", this.site, "_", this.stage, "_tracks_unchecked.rds"))
@@ -23,8 +23,7 @@ nID <- length(unique(tracks$ID))
 # a) erroneous loops created by aniMotum become ARS
 # b) ARS and transit behaviour is visually questionable
 # c) trips are all one category (generally very short trips)
-rm_trips <- c("165151_0", "165159_0", "165181_0", "165257_0", "CHPE188_0", "CHPE189_0", "CHPE199_0",
-              "CHPE202_0", "CHPE203_0", "CHPE207_0", "CHPE216_0")
+rm_trips <- c("123005_1", "130997_1", "130999_1", "131000_1", "131006_1", "131431_1", "150624_1")
 
 # remove trips with poor state assignments
 tracks <- tracks %>%

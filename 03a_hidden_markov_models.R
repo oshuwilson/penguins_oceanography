@@ -22,7 +22,7 @@ select <- dplyr::select
 # 1. Data preparation
 
 #define variables
-this.species <- "CHPE"
+this.species <- "EMPE"
 
 #read in species, region, and stage info 
 srs <- read.csv("data/tracks/species_site_stage.csv")
