@@ -1,10 +1,8 @@
 #----------------------------------------------------
 # Plot colony/breeding stage trends for each variable
 #----------------------------------------------------
-# add currents to map plots (same scale for all)
 # add inset map
 # add p-values to plots
-# change front histogram scale?
 
 
 rm(list=ls())
@@ -22,11 +20,11 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 # 1. Setup
 
 # define species
-this.species <- "EMPE"
-longname <- "Emperor Penguin"
+this.species <- "KIPE"
+longname <- "King Penguin"
 
 # read in species/site/stage info
-srs <- read.csv("data/tracks/species_site_stage.csv")
+srs <- read.csv("data/tracks/species_site_stage_v2.csv")
 
 # filter to this species only
 srs <- srs %>% 
@@ -57,7 +55,7 @@ for(this.stage in stages){
 # 2. Process tracks for histograms
 
 # load the tracks with states
-tracks <- readRDS(paste0("output/hmm/hmm_tracks/", this.species, "/", this.site, "_", this.stage, "_tracks_checked.rds"))
+tracks <- readRDS(paste0("output/hmm/hmm_tracks_by_colony/", this.species, "/", this.site, " ", this.stage, " tracks checked.rds"))
 
 # change state to binomial variable
 tracks <- tracks %>%
@@ -70,7 +68,10 @@ tracks <- tracks %>%
   ungroup()
 
 #read in original tracks to get lat/lons and error info
-original <- readRDS(paste0("output/tracks/", this.species, "/", this.site, " ", this.stage, " tracks.RDS"))
+area <- srs %>% 
+  filter(site == this.site & stage == this.stage) %>% 
+  pull(island)
+original <- readRDS(paste0("output/tracks/", this.species, "/", area, " ", this.stage, " tracks.RDS"))
 
 #append latitudes, longitudes, and errors to state tracks
 tracks <- tracks %>% 
@@ -89,19 +90,19 @@ tracks <- tracks %>%
   mutate(date = as_date(datetime))
 
 #get sunrise times
-tracks$sunrise <- getSunlightTimes(data = tracks,
-                                   keep = c("sunrise"), tz = "UTC") %>%
-  pull(sunrise)
+tracks$dawn <- getSunlightTimes(data = tracks,
+                                   keep = c("dawn"), tz = "UTC") %>%
+  pull(dawn)
 
 #get sunset times
-tracks$sunset <- getSunlightTimes(data = tracks,
-                                  keep = c("sunset"), tz = "UTC") %>%
-  pull(sunset)
+tracks$dusk <- getSunlightTimes(data = tracks,
+                                  keep = c("dusk"), tz = "UTC") %>%
+  pull(dusk)
 
 #only keep points between sunrise and sunset
 tracks <- tracks %>%
-  filter(datetime >= sunrise & datetime <= sunset |
-           is.na(sunrise) & is.na(sunset))
+  filter(datetime >= dawn & datetime <= dusk |
+           is.na(dawn) & is.na(dusk))
 
 # get p-values for this site and stage
 pvals <- pvalues %>%
@@ -109,107 +110,77 @@ pvals <- pvalues %>%
 edp <- pvals %>%
   filter(cov_names == "ed2") %>%
   pull(pvals)
-frontp <- pvals %>%
-  filter(cov_names == "front_freq") %>%
-  pull(pvals)
-
-# 3. Plot tracks
-
-# convert original tracks to terra
-original <- original %>%
-  vect(geom = c("lon", "lat"), crs = "epsg:4326") %>%
-  project("epsg:6932")
-
-# crop coast to track extent
-crop_coast <- crop(coast, ext(original))
-
-# project coast and tracks to lat/lon
-original <- project(original, "epsg:4326")
-crop_coast <- project(crop_coast, "epsg:4326")
-
-# find the average yday and year of tracks
-dates <- unique(as_date(original$date))
-years <- unique(year(original$date))
-
-# get current data (vo and uo) for all years
-for(year in years){
-  try(uo <- rast(paste0("E:/Satellite_Data/daily/uo/uo_", year, ".nc")))
-  try(vo <- rast(paste0("E:/Satellite_Data/daily/vo/vo_", year, ".nc")))
-  
-  # if no vo or uo for this year, skip
-  if(!exists("uo") | !exists("vo")){
-    years <- years[years != year]
-    next
-  }
-  
-  # limit to dates in tracks
-  uo <- uo[[time(uo) %in% dates]]
-  vo <- vo[[time(vo) %in% dates]]
-  
-  # crop to extent of tracks 
-  uo <- crop(uo, ext(original) + c(2, 2, 2, 2))
-  vo <- crop(vo, ext(original) + c(2, 2, 2, 2))
-  
-  # calculate current layer
-  curr <- sqrt(uo^2 + vo^2)
-
-  # join to other years
-  if(year == years[1]){
-    current <- curr
-  } else {
-    current <- c(current, curr)
-  }
-  
-  #reset
-  rm(uo, vo, curr)
-}
-
-# calculate average current speed
-current <- mean(current)
-
-# plot coast and tracks
-p1 <- ggplot() +
-  geom_spatraster(data = current) +
-  geom_spatvector(data = crop_coast, fill = "grey") + 
-  geom_spatvector(data = original, size = 0.5, col = "black") +
-  theme_classic() +
-  scale_x_continuous(expand = c(0,0)) +
-  scale_y_continuous(expand = c(0,0)) +
-  labs(fill = "Mean Current Velocity (m/s)") +
-  theme(legend.position = "top") +
-  scale_fill_continuous(guide = guide_colorbar(frame.colour = "black", ticks.colour = "black"))
-p1
 
 
-# 4. Plot Front Frequency
+# # 3. Plot tracks
+# 
+# # convert original tracks to terra
+# original <- original %>%
+#   vect(geom = c("lon", "lat"), crs = "epsg:4326") %>%
+#   project("epsg:6932")
+# 
+# # crop coast to track extent
+# crop_coast <- crop(coast, ext(original))
+# 
+# # project coast and tracks to lat/lon
+# original <- project(original, "epsg:4326")
+# crop_coast <- project(crop_coast, "epsg:4326")
+# 
+# # find the average yday and year of tracks
+# dates <- unique(as_date(original$date))
+# years <- unique(year(original$date))
+# 
+# # get current data (vo and uo) for all years
+# for(year in years){
+#   try(uo <- rast(paste0("E:/Satellite_Data/daily/uo/uo_", year, ".nc")))
+#   try(vo <- rast(paste0("E:/Satellite_Data/daily/vo/vo_", year, ".nc")))
+#   
+#   # if no vo or uo for this year, skip
+#   if(!exists("uo") | !exists("vo")){
+#     years <- years[years != year]
+#     next
+#   }
+#   
+#   # limit to dates in tracks
+#   uo <- uo[[time(uo) %in% dates]]
+#   vo <- vo[[time(vo) %in% dates]]
+#   
+#   # crop to extent of tracks 
+#   uo <- crop(uo, ext(original) + c(2, 2, 2, 2))
+#   vo <- crop(vo, ext(original) + c(2, 2, 2, 2))
+#   
+#   # calculate current layer
+#   curr <- sqrt(uo^2 + vo^2)
+# 
+#   # join to other years
+#   if(year == years[1]){
+#     current <- curr
+#   } else {
+#     current <- c(current, curr)
+#   }
+#   
+#   #reset
+#   rm(uo, vo, curr)
+# }
+# 
+# # calculate average current speed
+# current <- mean(current)
+# 
+# # plot coast and tracks
+# p1 <- ggplot() +
+#   geom_spatraster(data = current) +
+#   geom_spatvector(data = crop_coast, fill = "grey") + 
+#   geom_spatvector(data = original, size = 0.5, col = "black") +
+#   theme_classic() +
+#   scale_x_continuous(expand = c(0,0)) +
+#   scale_y_continuous(expand = c(0,0)) +
+#   labs(fill = "Mean Current Velocity (m/s)") +
+#   theme(legend.position = "top") +
+#   scale_fill_continuous(guide = guide_colorbar(frame.colour = "black", ticks.colour = "black"))
+# p1
 
-# get front frequency
-fronts <- smooths %>%
-  filter(!is.na(front_freq) &
-           site == this.site &
-           stage == this.stage)
 
-# plot front_frequency GAMM output  
-p2 <- ggplot(fronts) + 
-  geom_ribbon(aes(ymin = .lower_ci, ymax = .upper_ci, x = front_freq),
-              alpha = 0.2) + 
-  geom_line(aes(x = front_freq, y = .estimate), lwd = 0.5) +
-  theme_bw() +
-  scale_x_continuous(expand = c(0,0)) +
-  scale_y_continuous(limits = c(0, 1), expand = c(0,0)) + 
-  ylab("Prevalance of ARS state") +
-  xlab("Front Frequency") 
-
-# add histogram
-p2 <- p2 + geom_xsidehistogram(data = tracks, aes(x=front_freq), 
-                         bins=31, boundary = 0, 
-                         fill = "#230493", alpha = 0.2) + 
-  theme_ggside_void() +
-  theme(ggside.panel.scale.x = .3)
-p2
-
-
-# 5. Plot Relative Eddy Distance
+# 4. Plot Relative Eddy Distance
 
 # get eddy distance
 eddies <- smooths %>%
@@ -254,48 +225,55 @@ p3 <- p3 + scale_fill_manual(values = c("red4", "red3",
                              breaks = c("anticyclonic core", "anticyclonic periphery",
                                         "cyclonic core", "cyclonic periphery", "not eddy")) +
   scale_xsidey_continuous(expand = c(0,0))
-p3
 
-# remove legend from p3
-p3 <- p3 + guides(fill = "none")
+# add title
+p3 <- p3 + ggtitle(paste0(longname, "s at ", this.site, " (", this.stage, ")"))
 
-# get legend
-legend <- readRDS("output/imagery/colony plots/legend.RDS")
+# export
+ggsave(filename = paste0("output/imagery/colony plots/", this.species, "/", this.site, " ", this.stage, " eddy.png"),
+       plot = p3, width = 8, height = 8, units = "in", dpi = 300)
 
 
-
-# 6. layout all together
-
-# oceanography plots
-plots <- plot_grid(p2, p3, legend, nrow = 3, rel_heights = c(4, 4, 1))
-plots
-
-#all plots
-layout <- plot_grid(p1, plots, ncol = 2)
-layout
-
-#title
-title <- ggdraw() + 
-  draw_label(
-    paste0(longname, "s at ", this.site, " (", this.stage, ")"),
-    fontface = 'bold',
-    x = 0,
-    hjust = 0
-  ) +
-  theme(
-    # add margin on the left of the drawing canvas,
-    # so title is aligned with left edge of first plot
-    plot.margin = margin(0, 0, 0, 200)
-  )
-
-#all together
-final <- plot_grid(title, layout, nrow = 2, rel_heights = c(1, 20))
-final
-
-# export 
-ggsave(paste0("output/imagery/colony plots/", this.species, "/", this.site, "_", this.stage, ".svg"), final, 
-       width = 9, height = 8, units = "in", dpi = 300,
-       create.dir = T)
+# # remove legend from p3
+# p3 <- p3 + guides(fill = "none")
+# 
+# # get legend
+# legend <- readRDS("output/imagery/colony plots/legend.RDS")
+# 
+# 
+# 
+# # 6. layout all together
+# 
+# # oceanography plots
+# plots <- plot_grid(p2, p3, legend, nrow = 3, rel_heights = c(4, 4, 1))
+# plots
+# 
+# #all plots
+# layout <- plot_grid(p1, plots, ncol = 2)
+# layout
+# 
+# #title
+# title <- ggdraw() + 
+#   draw_label(
+#     paste0(longname, "s at ", this.site, " (", this.stage, ")"),
+#     fontface = 'bold',
+#     x = 0,
+#     hjust = 0
+#   ) +
+#   theme(
+#     # add margin on the left of the drawing canvas,
+#     # so title is aligned with left edge of first plot
+#     plot.margin = margin(0, 0, 0, 200)
+#   )
+# 
+# #all together
+# final <- plot_grid(title, layout, nrow = 2, rel_heights = c(1, 20))
+# final
+# 
+# # export 
+# ggsave(paste0("output/imagery/colony plots/", this.species, "/", this.site, "_", this.stage, ".svg"), final, 
+#        width = 9, height = 8, units = "in", dpi = 300,
+#        create.dir = T)
 
 # print completion
 print(paste0("Completed ", this.site, " ", this.stage))

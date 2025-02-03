@@ -31,11 +31,11 @@ pred_gam <- function(tracks){
 # 1. Data Preparation
 
 # define species
-this.species <- "EMPE"
-longname <- "Emperor Penguin"
+this.species <- "KIPE"
+longname <- "King Penguin"
 
 # read in species, region, and stage info
-srs <- read.csv("data/tracks/species_site_stage.csv")
+srs <- read.csv("data/tracks/species_site_stage_v2.csv")
 srs <- srs %>%
   filter(species == this.species)
 
@@ -51,8 +51,18 @@ for(this.stage in stages){
   for(this.site in regions){
     try({
     
+    # find larger area to get original tracks
+    area <- srs %>% 
+      filter(site == this.site, stage == this.stage) %>%
+      pull(island)
+      
     # load the tracks with states
-    tracks <- readRDS(paste0("output/hmm/hmm_tracks/", this.species, "/", this.site, "_", this.stage, "_tracks_checked.rds"))
+    tracks <- readRDS(paste0("output/hmm/hmm_tracks_by_colony/", this.species, "/", this.site, " ", this.stage, " tracks checked.rds"))
+    
+    # if fewer than 3 individuals, skip to next site
+    if(length(unique(tracks$individual_id)) < 3){
+      next
+    }
     
     # change state to binomial variable
     tracks <- tracks %>%
@@ -61,11 +71,11 @@ for(this.stage in stages){
     #resample eddy 0s to values between -0.99 and 0.99 - to avoid misleading trends between -1 and 1
     tracks <- tracks %>%
       group_by(row_number()) %>%
-      mutate(ed2 = ifelse(eddies == 0, runif(1, -0.99, 0.99), eddies)) %>%
+      mutate(ed2 = ifelse(eddies == 0, runif(n(), -0.99, 0.99), eddies)) %>%
       ungroup()
     
     #read in original tracks to get lat/lons and error info
-    original <- readRDS(paste0("output/tracks/", this.species, "/", this.site, " ", this.stage, " tracks.RDS"))
+    original <- readRDS(paste0("output/tracks/", this.species, "/", area, " ", this.stage, " tracks.RDS"))
     
     #append latitudes, longitudes, and errors to state tracks
     tracks <- tracks %>% 
@@ -199,6 +209,7 @@ for(this.stage in stages){
     }
     })
   }
+}
 
 #export smooths
 saveRDS(smooths, paste0("output/gamms/smooths/", this.species, "_smooths.rds"))
