@@ -20,9 +20,6 @@ srs <- srs %>%
   filter(!stage %in% c("post-breeding", "pre-moult", "post-moult")) %>%
   filter(species != "KIPE" | stage != "late chick-rearing") #MAPE late chick-rearing is CPF
 
-#DELETE - for skipping completed colonies
-#srs <- srs[-c(1:10),]
-
 # loop over each breeding stage at each colony
 for(j in 1:nrow(srs)){
   
@@ -132,7 +129,7 @@ for(j in 1:nrow(srs)){
   # crop coast to extent of buffer
   crop_coast <- crop(coast, ext(buff))
   
-  # erase land - IS THIS WORKING?
+  # erase land 
   buff <- erase(buff, crop_coast)
   
   # plot final boundary with tracks to check background sampling for each colony
