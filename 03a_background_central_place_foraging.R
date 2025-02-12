@@ -229,6 +229,9 @@ for(j in 1:nrow(srs)){
     back <- dynamic_extract("sic", back)
   }
   
+  # convert to dataframe
+  back <- back %>%
+    as.data.frame(geom = "XY")
   
   # 7. Export
   

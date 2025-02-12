@@ -17,14 +17,14 @@ setwd("/iridisfs/scratch/jcw2g17/Chapter_02/")
 # read in species site stage info to loop over
 srs <- read.csv("data/tracks/species_site_stage_v2.csv")
 
-# keep stages that aren't central-place-foraging
+# remove stages that aren't central-place-foraging
 srs <- srs %>% 
   filter(stage %in% c("post-breeding", "pre-moult", "post-moult") |
            species == "KIPE" & stage == "late chick-rearing")
 
-# filter to Kings and Macaronis
+# filter to Adelies, Chinstraps, and Emperors
 srs <- srs %>% 
-  filter(species %in% c("KIPE", "MAPE"))
+  filter(species %in% c("ADPE", "CHPE", "EMPE"))
 
 # isolate colony and breeding stage
 for(i in 1:nrow(srs)){
@@ -97,9 +97,9 @@ for(i in 1:nrow(srs)){
   
   # select key variables
   ars <- ars %>% 
-    select(individual_id, ed2, depth, curr, pa)
+    select(individual_id, ed2, depth, curr, sic, pa)
   back <- back %>%
-    select(individual_id, ed2, depth, curr, pa)
+    select(individual_id, ed2, depth, curr, sic, pa)
   
   
   # 2. GAMM
@@ -121,9 +121,30 @@ for(i in 1:nrow(srs)){
     next
   }
   
-  # run GAMM 
-  m1 <- gamm4(pa ~ s(ed2, bs = "ts") + s(depth, bs = "ts") + s(curr, bs = "ts"),
+  # if sea ice concentration varies in only one or no individuals, don't use as a variable
+  smallvar <- ars %>%
+    select(sic, individual_id) %>%
+    group_by(individual_id) %>%
+    summarise_all(n_distinct)
+  ss <- smallvar %>% 
+    filter(sic == 1) %>%
+    nrow()
+  if(ss >= nrow(smallvar) - 1){
+    use_sic <- FALSE
+  } else {
+    use_sic <- TRUE
+  }
+  
+  # run GAMM - accounting for variable sea ice use
+  if(use_sic == TRUE){
+    m1 <- gamm4(pa ~ s(ed2, bs = "ts") + s(depth, bs = "ts") + 
+                s(curr, bs = "ts") + s(sic, bs = "ts"),
               random = ~(1|individual_id), family = binomial, data = data)
+  } else {
+    m1 <- gamm4(pa ~ s(ed2, bs = "ts") + s(depth, bs = "ts") + 
+                s(curr, bs = "ts"),
+              random = ~(1|individual_id), family = binomial, data = data)
+  }
   
   
   # 3. Odds Ratios
