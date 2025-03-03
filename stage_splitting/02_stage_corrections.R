@@ -264,7 +264,7 @@ bas_sg_2011_stages <- bas_sg_2011_tracks %>%
   summarise(start = min(date), end = max(date))
 
 
-# 4. BAS_SG_2021 are all late chick-rearing (already assigned as that anyway)
+# 4. BAS_SG_2021 need some reassigning as early chick-rearing
 
 #isolate bas_sg_2021 stages
 bas_sg_2021 <- meta %>% filter(dataset_identifier == "BAS_SG_2021")

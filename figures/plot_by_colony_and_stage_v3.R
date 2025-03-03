@@ -2,8 +2,6 @@
 # Plot Background Availability and Eddy Usage by Colony
 #------------------------------------------------------
 
-# ADD MAPS WITH COVARIATE (EDDIES OR EKE OR CURR)
-
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 
@@ -19,16 +17,15 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 # read in species site stage info to loop over
 srs <- read.csv("data/tracks/species_site_stage_v2.csv")
 
-# sites of interest
-srs <- srs %>% 
-  filter(site %in% c("Rookery Bay, South Georgia"))
-
+# read in updated stage versions
+srs2 <- read.csv("data/tracks/species_site_stage_v3.csv")
 
 # isolate colony and breeding stage
 for(i in 1:nrow(srs)){
   this.species <- srs$species[i]
   this.site <- srs$site[i]
   this.stage <- srs$stage[i]
+  new.stage <- srs2$stage[i]
   
   #-------------------------------------------------------------------------------
   # 1. Background Availability Plot
@@ -177,7 +174,7 @@ for(i in 1:nrow(srs)){
   #-------------------------------------------------------------------------------
   
   # cleanup
-  rm(list=setdiff(ls(), c("p1", "i", "srs", "this.species", "this.site", "this.stage")))
+  rm(list=setdiff(ls(), c("p1", "i", "srs", "srs2", "this.species", "this.site", "this.stage", "new.stage")))
   
   # load in GAMM model
   try(m1 <- readRDS(paste0("output/gamms/models/", this.species, "/", this.site, " ", this.stage, " gamm.rds")))
@@ -303,7 +300,7 @@ for(i in 1:nrow(srs)){
   #-------------------------------------------------------------------------------
   
   # cleanup
-  rm(list=setdiff(ls(), c("p1", "p2", "p3", "i", "srs", "this.species", "this.site", "this.stage")))
+  rm(list=setdiff(ls(), c("p1", "p2", "p3", "i", "srs", "srs2", "this.species", "this.site", "this.stage", "new.stage")))
   
   # get legend for eddy plots
   legend <- get_legend(p3)
@@ -323,7 +320,7 @@ for(i in 1:nrow(srs)){
   # add title
   title <- ggdraw() + 
     draw_label(
-      paste0(this.species, " ", this.site, " (", this.stage, ")"),
+      paste0(this.species, " ", this.site, " (", new.stage, ")"),
       fontface = 'bold',
       size = 20,
       x = 0,
@@ -335,7 +332,7 @@ for(i in 1:nrow(srs)){
   print(final)
   
   # export plots
-  ggsave(paste0("output/imagery/colony odds ratios/", this.species, "/", this.site, " ", this.stage, " odds ratios.png"), final, 
+  ggsave(paste0("output/imagery/colony odds ratios v2/", this.species, "/", this.site, " ", new.stage, " odds ratios.png"), final, 
          width = 7.8, height = 11, dpi = 300, create.dir = T)
   
 }

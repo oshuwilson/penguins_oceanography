@@ -22,7 +22,7 @@ select <- dplyr::select
 # 1. Data preparation
 
 #define variables
-this.species <- "EMPE"
+this.species <- "ADPE"
 
 #read in species, region, and stage info 
 srs <- read.csv("data/tracks/species_site_stage.csv")
@@ -31,6 +31,10 @@ srs <- srs %>%
 
 #loop over each study site
 regions <- unique(srs$site)
+
+#limit to site of interest 
+regions <- "King George"
+
 for(this.site in regions){
 
   #identify stages for this region
@@ -310,7 +314,6 @@ for(this.site in regions){
       scale_color_manual(labels = c("ARS", "Transit", "Total"), values = c("darkred", "steelblue4", "black")) +
       scale_linetype_manual(labels = c("ARS", "Transit", "Total"), values = c("solid", "solid", "dashed")) +
       labs(col = "State", linetype = "State")
-    p2
     ggsave(paste0("output/hmm/distributions/", this.species, "/", this.site, "_", this.stage, "_angle.png"), 
            p2, create.dir = T,
            width = 10, height = 6)

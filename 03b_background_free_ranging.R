@@ -17,12 +17,16 @@ srs <- read.csv("data/tracks/species_site_stage_v2.csv")
 
 # keep stages that aren't central-place-foraging
 srs <- srs %>% 
-  filter(stage %in% c("post-breeding", "pre-moult", "post-moult") |
+  filter(stage %in% c("post-breeding", "pre-moult", "post-moult", "fledglings") |
            species == "KIPE" & stage == "late chick-rearing") # KIPE late chick-rearing is free-roaming
 
 # read in oceans and coast files for masking
 oceans <- readRDS("data/oceans_vect.RDS")
 coast <- readRDS("data/coast_vect.RDS")
+
+# sites of interest
+srs <- srs %>% 
+  filter(site %in% c("Auster Rookery", "Pointe Geologie", "Taylor Glacier", "Admiralty Bay, South Shetland"))
 
 # loop over colonies 
 for(j in 1:nrow(srs)){

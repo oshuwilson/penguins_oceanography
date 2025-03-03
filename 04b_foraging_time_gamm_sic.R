@@ -17,14 +17,18 @@ setwd("/iridisfs/scratch/jcw2g17/Chapter_02/")
 # read in species site stage info to loop over
 srs <- read.csv("data/tracks/species_site_stage_v2.csv")
 
-# remove stages that aren't central-place-foraging
-srs <- srs %>% 
-  filter(stage %in% c("post-breeding", "pre-moult", "post-moult") |
-           species == "KIPE" & stage == "late chick-rearing")
-
 # filter to Adelies, Chinstraps, and Emperors
 srs <- srs %>% 
   filter(species %in% c("ADPE", "CHPE", "EMPE"))
+
+# keep stages that aren't central-place-foraging
+srs <- srs %>% 
+  filter(stage %in% c("post-breeding", "pre-moult", "post-moult", "fledglings") |
+           species == "KIPE" & stage == "late chick-rearing") # KIPE late chick-rearing is free-roaming
+
+# sites of interest
+srs <- srs %>% 
+  filter(site %in% c("Auster Rookery", "Pointe Geologie", "Taylor Glacier", "Admiralty Bay, South Shetland"))
 
 # isolate colony and breeding stage
 for(i in 1:nrow(srs)){
@@ -43,8 +47,19 @@ for(i in 1:nrow(srs)){
   
   # 1. Process Data
   
+  # if fledglings, rename stage to post-breeding/pre-moult depending on species
+  if(this.stage == "fledglings"){
+    if(this.species == "ADPE"){
+      og.stage <- "pre-moult"
+    } else {
+      og.stage <- "post-breeding"
+    }
+  } else {
+    og.stage <- this.stage
+  }
+  
   #read in original tracks to get lat/lons and error info
-  original <- readRDS(paste0("output/tracks/", this.species, "/", area, " ", this.stage, " tracks.RDS"))
+  original <- readRDS(paste0("output/tracks/", this.species, "/", area, " ", og.stage, " tracks.RDS"))
   
   #append latitudes, longitudes, and errors to state tracks
   tracks <- tracks %>% 

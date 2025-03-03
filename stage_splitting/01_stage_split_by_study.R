@@ -14,20 +14,15 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02/")
 coast <- readRDS("data/coast_vect.RDS")
 
 #define species and study
-this.species <- "EMPE"
-this.study <- "Colbeck_2013"
+this.species <- "MAPE"
+this.study <- "NMU_Marion_2018"
 
 #read in ssm_tracks and metadata for this species and study
 tracks <- readRDS(paste0("data/tracks/", this.species, "/all_tracks.RDS"))
-meta <- readRDS("~/OneDrive - University of Southampton/Documents/RAATD 2.0/Metadata/RAATD_2_Metadata.RDS")
+meta <- readRDS("data/metadata.RDS")
 meta <- meta %>% 
   filter(abbreviated_name == this.species & 
            dataset_identifier == this.study)
-
-#change colony name for CHPE to avoid slash
-meta <- meta %>%
-  mutate(deployment_site = ifelse(deployment_site == "Signy Island/Gourlay, South Orkney Islands", 
-                                  "Signy Island, South Orkney", deployment_site))
 
 #filter tracks to this study
 tracks <- tracks %>% 
@@ -39,6 +34,9 @@ colony_names <- meta %>%
   select(deployment_site) %>%
   distinct() %>%
   pull()
+
+#remove Marion Island colony name
+colony_names <- colony_names[-which(colony_names == "Marion Island, Prince Edward Islands")]
 
 #read in stage dates
 stage_dates <- readRDS(paste0("~/OneDrive - University of Southampton/Documents/Chapter 02/code/stage_splitting/config/", this.species, "config.RDS"))
@@ -111,7 +109,7 @@ for(i in colony_names){
   #convert tracks to terra stereographic view
   trax <- vect(colony_tracks, geom = c("lon", "lat"), crs = "epsg:4326")
   trax <- project(trax, "epsg:6932")
-  plot(trax, pch = ".")
+  print(plot(trax, pch = "."))
   
   #split up trips
   colony_tracks <- trip_split(trax, meta, buff.dist = 10000)
@@ -244,19 +242,39 @@ stage_by_id <- all_tracks %>%
 
 # 5. Reassign trips from visual checks or other info
 
-#new chick-rearing IDs
-chickrearing <- c("29330_17_12_13", "29330_27_12_13", "29602_20_12_13", 
-                  "29606_18_12_13", "29626_18_12_13", "29629_18_12_13")
+#new early chick-rearing IDs
+ecr <- c("1_2", "10_2", "10_3", "10_4", "10_5", "10_6", "10_7", "12_2", 
+         "13_2", "13_3", "13_4", "13_5", "15_2", "2_2", "2_3", "2_4", "2_5", "2_6", "2_7",
+         "34_2", "43_1", "44_1", "5_2", "5_3", "5_4", "5_5", 
+         "8_2", "8_3", "8_4", "8_5", "8_6", "8_7", "8_8", "8_9", "9_2", "9_3",
+         "17_2", "17_3", "18_2", "18_3", "18_4", "18_5", "18_6", "18_7", "18_8", "18_9", "18_10",
+         "18_11", "19_2", "19_3", "19_4", "20_2", "21_3", "21_4", "21_5", "22_2", "22_3", "22_4",
+         "22_5", "22_6", "22_7", "23_3", "23_4", "23_5", "23_6", "23_7", "23_8", "23_9", "23_10",
+         "23_11", "24_2", "24_3", "24_4", "24_5", "24_6", "24_7", "24_8", "24_9", "24_10", "24_11",
+         "24_12", "24_13", "24_14", "26_2", "26_3", "26_4", "27_2", "27_3", "27_4", "27_5", "27_6",
+         "27_7", "27_8", "27_9", "27_10", "27_11", "27_12", "41_2", "41_3", "41_4", "41_5", "41_6",
+         "42_2", "42_3")
+
+# new incubation IDs
+inc <- c("1_1", "10_1", "11_1", "12_1", "13_1", "14_1", "15_1", "2_1", "3_1",
+         "30_1", "31_1", "32_1", "33_1", "34_1", "35_1", "4_1", "5_1", "6_1", "7_1",
+         "8_1", "9_1", "16_1", "24_1", "25_1", "26_1", "36_1", "42_1")
+
+# new late chick-rearing IDs
+lcr <- c("17_4", "21_6", "27_16", "27_17")
 
 #reassign stage names
-stage_by_id <- stage_by_id %>%
+all_tracks <- all_tracks %>%
   mutate(stage = case_when(
-    individual_id %in% chickrearing ~ "chick-rearing",
+    trip %in% ecr ~ "early chick-rearing",
+    trip %in% inc ~ "incubation",
+    trip %in% lcr ~ "late chick-rearing",
     TRUE ~ stage
-  )) %>%
-  ungroup() %>%
+  ))
+
+stage_by_id <- all_tracks %>% 
   group_by(individual_id, device_id, stage) %>%
-  summarise(start = min(start), end = max(end))
+  summarise(start = first(date), end = last(date)) 
 
 
 # 6. Create stage dates for each id
@@ -264,9 +282,9 @@ stage_by_id <- stage_by_id %>%
 #join to all stages
 stages <- readRDS(paste0("data/stages/", this.species, "_stages.RDS"))
 stages <- stages %>%
-  filter(!individual_id %in% stage_by_id$individual_id &
-           !device_id %in% stage_by_id$device_id) %>%
-  bind_rows(stage_by_id)
+  filter(!individual_id %in% stage_by_id$individual_id) %>%
+  bind_rows(stage_by_id) %>%
+  select(-device_id)
 
 
 #save stage dates

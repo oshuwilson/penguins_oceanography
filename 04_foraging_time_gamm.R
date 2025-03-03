@@ -17,10 +17,9 @@ setwd("/iridisfs/scratch/jcw2g17/Chapter_02/")
 # read in species site stage info to loop over
 srs <- read.csv("data/tracks/species_site_stage_v2.csv")
 
-# keep stages that aren't central-place-foraging
-srs <- srs %>% 
-  filter(stage %in% c("post-breeding", "pre-moult", "post-moult") |
-           species == "KIPE" & stage == "late chick-rearing")
+# site of interest
+srs <- srs %>%
+  filter(site == "Rookery Bay, South Georgia")
 
 # filter to Kings and Macaronis
 srs <- srs %>% 
@@ -163,3 +162,4 @@ for(i in 1:nrow(srs)){
   print(paste0(this.species, " ", this.site, " ", this.stage, " complete"))
   
 }
+

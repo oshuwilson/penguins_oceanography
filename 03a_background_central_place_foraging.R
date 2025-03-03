@@ -20,6 +20,10 @@ srs <- srs %>%
   filter(!stage %in% c("post-breeding", "pre-moult", "post-moult")) %>%
   filter(species != "KIPE" | stage != "late chick-rearing") #MAPE late chick-rearing is CPF
 
+# sites of interest
+srs <- srs %>% 
+  filter(site == "Rookery Bay, South Georgia")
+
 # loop over each breeding stage at each colony
 for(j in 1:nrow(srs)){
   
