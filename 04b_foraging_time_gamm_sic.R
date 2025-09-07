@@ -17,18 +17,12 @@ setwd("/iridisfs/scratch/jcw2g17/Chapter_02/")
 # read in species site stage info to loop over
 srs <- read.csv("data/tracks/species_site_stage_v2.csv")
 
+# limit to examples with pack ice
+srs <- srs %>% filter(rm_pack_ice == "yes")
+
 # filter to Adelies, Chinstraps, and Emperors
 srs <- srs %>% 
   filter(species %in% c("ADPE", "CHPE", "EMPE"))
-
-# keep stages that aren't central-place-foraging
-srs <- srs %>% 
-  filter(stage %in% c("post-breeding", "pre-moult", "post-moult", "fledglings") |
-           species == "KIPE" & stage == "late chick-rearing") # KIPE late chick-rearing is free-roaming
-
-# sites of interest
-srs <- srs %>% 
-  filter(site %in% c("Auster Rookery", "Pointe Geologie", "Taylor Glacier", "Admiralty Bay, South Shetland"))
 
 # isolate colony and breeding stage
 for(i in 1:nrow(srs)){
@@ -121,6 +115,10 @@ for(i in 1:nrow(srs)){
   
   # join datasets together
   data <- bind_rows(ars, back)
+  
+  # remove sea ice concentrations above 10%
+  data <- data %>%
+    filter(sic < 0.1)
   
   # if eddies vary in only one or no individuals, export smooth file as 0 and skip
   smallvar <- ars %>%

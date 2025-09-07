@@ -295,3 +295,95 @@ dynamic_wind_1999 <- function(predictor, tracks, direction){
   return(tracks_extracted)
   
 }
+
+#--------------------------------------------
+# 5. dynamic_extract_auger - for eddies_auger only recorded every 3 days
+
+#extracts variables to points based on the day and year of that point
+#requires terra, tidyterra, dplyr, and lubridate
+#tracks must have a datetime column called date and be a SpatVector
+
+dynamic_extract_auger <- function(predictor, tracks){
+  
+  #first create a list of the years within the tracks
+  tracks$year <- as.factor(year(tracks$date))
+  years <- levels(tracks$year)
+  
+  #empty variable for loop to feed into
+  tracks_extracted <- NULL
+  
+  #for loop by year - bind = TRUE
+  for(z in years){
+    trax <- filter(tracks, year==z)
+    try(pred <- rast(paste0("E:/Satellite_Data/daily/", predictor, "/", predictor, "_", z, ".nc")))
+    #if no predictor exists for that year, assign all values as NA
+    if(!exists("pred")){
+      xtractions <- as.data.frame(trax, geom = "XY")
+      xtractions[predictor] <- NA
+      xtractions$yday <- NA
+      tracks_extracted <- rbind(tracks_extracted, xtractions)
+      next
+    }
+    
+    #crop predictor to extent of tracks
+    e <- ext(trax) + c(0.5,0.5,0.5,0.5) #create SpatExtent for cropping raster
+    pred_crop <- crop(pred, e) #crop to increase speed
+    
+    #get days of the year that tracks are present for
+    trax$yday <- yday(trax$date) #extract all yday numbers from data
+    ydays <- unique(trax$yday) %>% sort() #different levels of ydays
+    
+    #get days of the year that predictor is present for
+    pred_ydays <- yday(time(pred_crop))
+    
+    #get list of days where predictor_yday is within 1 of any track yday
+    #this is to account for the fact that eddies_auger is only recorded every 3 days
+    rel_ydays <- pred_ydays[pred_ydays %in% c(ydays - 1, ydays, ydays + 1)]
+    
+    #get list of days where tracks are present but there is no predictor data
+    missing_ydays <- setdiff(ydays, c(rel_ydays, rel_ydays - 1, rel_ydays + 1))
+    
+    #create empty list for next loop to feed into
+    xtractions <- NULL 
+    
+    #for loop by yday
+    for(i in rel_ydays){
+      points <- filter(trax, yday==i | yday - 1 == i | yday + 1 == i) #subsets by yday
+      
+      #if yday is not missing in predictor data
+      if(!i %in% missing_ydays){
+        yday.date <- as_date(i-1) #extracts date for yday
+        year(yday.date) <- as.integer(z) #assigns correct year
+        
+        # if z is a leap year add 1 day to all dates from March onwards
+        if(leap_year(as.integer(z)) & i > 59) {
+          yday.date <- yday.date - days(1)
+        }
+        
+        slice <- pred_crop[[time(pred_crop) == yday.date]] #slices raster by yday
+        xtracted <- extract(slice, points, ID=F, bind=T) #extract values from slice
+        xtracted_df <- as.data.frame(xtracted, geom="XY") #create dataframe for binding
+        names(xtracted_df)[length(names(xtracted_df))-2] <- predictor #rename column to predictor name
+        xtractions <- rbind(xtractions, xtracted_df) #bind with previous ydays
+      } else {
+        xtracted_df <- as.data.frame(points, geom = "XY") # create dataframe for binding
+        xtracted_df[predictor] <- NA #assign NA values where predictor information is missing
+        xtractions <- rbind(xtractions, xtracted_df) #bind with previous ydays
+      }
+    }
+    
+    tracks_extracted <- rbind(tracks_extracted, xtractions) #bind together all years
+    rm(pred) #remove pred to maintain next statement
+  }
+  
+  #remove yday column for next predictor to work
+  tracks_extracted <- dplyr::select(tracks_extracted, -yday, -year)
+  
+  #reformat into SpatVector
+  tracks_extracted <- vect(tracks_extracted,
+                           geom=c("x", "y"),
+                           crs=crs(tracks))
+  
+  return(tracks_extracted)
+  
+}

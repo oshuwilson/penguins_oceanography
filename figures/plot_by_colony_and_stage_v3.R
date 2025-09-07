@@ -324,7 +324,7 @@ for(i in 1:nrow(srs)){
       fontface = 'bold',
       size = 20,
       x = 0,
-      hjust = -0.09
+      hjust = -0.01
     ) 
   
   # all together

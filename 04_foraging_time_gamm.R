@@ -17,13 +17,17 @@ setwd("/iridisfs/scratch/jcw2g17/Chapter_02/")
 # read in species site stage info to loop over
 srs <- read.csv("data/tracks/species_site_stage_v2.csv")
 
-# site of interest
-srs <- srs %>%
-  filter(site == "Rookery Bay, South Georgia")
-
-# filter to Kings and Macaronis
-srs <- srs %>% 
-  filter(species %in% c("KIPE", "MAPE"))
+# sites of interest
+# srs <- srs %>%
+#   mutate(case_study = paste(species, site, stage, sep = " ")) %>%
+#   filter(case_study %in% c("ADPE Windmill Islands chick-rearing",
+#                            "ADPE Bechervaise Island chick-rearing",
+#                            "ADPE Admiralty Bay, South Shetland chick-rearing",
+#                            "ADPE Admiralty Bay, South Shetland incubation",
+#                            "EMPE Taylor Glacier fledglings",
+#                            "EMPE Auster Rookery fledglings",
+#                            "ADPE Cape Bird chick-rearing")) %>%
+#   select(-case_study)
 
 # isolate colony and breeding stage
 for(i in 1:nrow(srs)){
@@ -96,15 +100,20 @@ for(i in 1:nrow(srs)){
   
   # select key variables
   ars <- ars %>% 
-    select(individual_id, ed2, depth, curr, pa)
+    select(individual_id, ed2, depth, curr, sic, pa)
   back <- back %>%
-    select(individual_id, ed2, depth, curr, pa)
+    select(individual_id, ed2, depth, curr, sic, pa)
   
   
   # 2. GAMM
   
   # join datasets together
   data <- bind_rows(ars, back)
+  
+  # remove points with SIC > 0.1
+  data <- data %>%
+    filter(sic <= 0.1 | is.na(sic)) %>%
+    select(-sic)
   
   # if eddies vary in only one or no individuals, export smooth file as 0 and skip
   smallvar <- ars %>%
@@ -143,7 +152,8 @@ for(i in 1:nrow(srs)){
     geom_ribbon(aes(x = ed2, ymin = .lower_ci, ymax = .upper_ci), alpha = 0.2) + 
     theme_minimal() + 
     geom_hline(yintercept = 1, linetype = "dashed", col = "darkred") +
-    labs(x = "Relative Eddy Distance", y = "Odds Ratio")
+    labs(x = "Relative Eddy Distance", y = "Odds Ratio") +
+    ylim(0, 4)
   
   
   # 4. Export
