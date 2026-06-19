@@ -20,8 +20,8 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 srs <- read.csv("data/tracks/species_site_stage_v2.csv")
 
 # sites of interest
-srs <- srs %>% 
-  filter(site %in% c("Rookery Bay, South Georgia"))
+# srs <- srs %>% 
+#   filter(site %in% c("Rookery Bay, South Georgia"))
 
 
 # isolate colony and breeding stage

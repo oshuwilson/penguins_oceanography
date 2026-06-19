@@ -13,15 +13,12 @@ srs <- read.csv("data/tracks/species_site_stage_v2.csv")
 
 # remove sites where eddies were not encountered (no model created)
 srs <- srs %>%
-  filter(!site %in% c("Tierra del Fuego", "Cape Bird", "Mamejima Island", "Cape Colbeck")) %>%
+  filter(!site %in% c("Tierra del Fuego", "Cape Bird", "Cape Colbeck")) %>%
   filter(site != "Edmonson Point" | stage == "pre-moult") %>%
   filter(site != "Point Thomas, King George Island" | stage != "chick-rearing") %>%
   filter(site != "Stranger Point, King George Island" | stage != "chick-rearing") %>%
-  filter(site != "Signy" | stage != "incubation") %>%
-  filter(site != "Pointe Geologie" | stage != "post-breeding") %>%
-  filter(site != "Rothschild Island" | stage != "chick-rearing")
-
-for(i in 38:nrow(srs)){
+  filter(site != "Pointe Geologie" | stage != "post-breeding") 
+for(i in 1:nrow(srs)){
   
   # define species, site, and stage
   this.species <- srs$species[i]

@@ -103,7 +103,7 @@ for(this.site in regions){
     source("code/functions/trip_split.R")
     trax <- trip_split(trax, meta, buff.dist = 10000)
     
-    #remove points around colony where localised movements are often misidentified as ARS
+    #remove points around colony where ARS is unlikely to equal foraging
     trax <- trax %>%
       filter(dist_to_colony > 10000)
     

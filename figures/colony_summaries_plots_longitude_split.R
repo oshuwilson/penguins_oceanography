@@ -18,12 +18,13 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 
 # read in species-site-stage metadata
 srs <- read.csv("data/tracks/species_site_stage_v2.csv")
-# i = 26, 44 (rotate) split_longitude code
+# FIX i = 26, 44 (rotate)
+# i = 32, 33 is Pointe Geologie - slow
 # i = 56 Macaroni Cwm not run on iridis
 
 # completed 1:25, 27:43, 45:74
 
-for(i in 56){
+for(i in 44){
   
   rm(list=setdiff(ls(), c("srs", "i")))
   
@@ -81,6 +82,10 @@ for(i in 56){
     tracks <- tracks %>%
       filter(lon < -68.5)
   }
+  
+  # rotate longitude
+  tracks <- tracks %>%
+    mutate(lon = ifelse(lon < 0, lon + 360, lon))
   
   # recreate trax
   trax <- tracks %>%
@@ -195,6 +200,10 @@ for(i in 56){
       eddies <- c(eddies, eddiesn)
     }
     
+    # rotate eddies
+    eddies <- eddies %>%
+      rotate()
+    
     # crop to extent of tracks
     e <- ext(trax) + c(0.5, 0.5, 0.5, 0.5)
     eddies <- crop(eddies, e)
@@ -268,7 +277,7 @@ for(i in 56){
       filter(individual_id %in% year_inds) 
     
     # crop coast to tracks
-    crop_coast <- crop(coast, e)
+    crop_coast <- crop(coast, ext(162.45891, 180, -77.54165, -60))
     
     # plot this year's tracks
     p1 <- ggplot() +

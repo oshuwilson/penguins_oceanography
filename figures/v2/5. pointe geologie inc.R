@@ -13,6 +13,7 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02/")
   library(gratia)
   library(gamm4)
   library(cowplot)
+  library(sf)
 }
 
 # coastline
@@ -95,6 +96,7 @@ dep_years <- deps %>%
   pull(start_year) %>%
   unique() %>%
   sort()
+dep_years <- c(2015, 2017, 2018, 2019, 2020)
 
 
 for(z in 1:length(dep_years)){
@@ -184,7 +186,8 @@ for(z in 1:length(dep_years)){
     theme_bw() +
     scale_x_continuous(expand = c(0, 0)) +
     scale_y_continuous(expand = c(0, 0)) +
-    ggtitle(year)
+    ggtitle(year) +
+    ggspatial::annotation_scale(style = "ticks", location = "bl")
   print(p1)
   
   # store plot in list
@@ -204,7 +207,7 @@ edplots2 <- lapply(edplots, function(x){
 })
 
 # select years with biggest sample size (less clutter)
-edplots2 <- edplots2[c(3, 5:8)]
+#edplots2 <- edplots2[c(3, 5:8)]
 
 # add legend
 edplots2[[6]] <- eddy_legend
@@ -304,7 +307,7 @@ p2 <- ggplot(cyclones, aes(x = band, fill = as.numeric(OR))) +
   geom_vline(xintercept = 8.5, color = "black", lwd = 1) +
   coord_polar(theta = "y") + 
   theme_void() +
-  scale_fill_gradient2(low = "steelblue4", high = "darkred", midpoint = 1,
+  scale_fill_gradient2(low = "#3f0b4b", high = "#00441b", midpoint = 1,
                        name = "Odds Ratio", limits = c(0, 3),
                        labels = c(0, 1, 2, "3+"),
                        na.value = "grey") +
@@ -321,7 +324,7 @@ p3 <- ggplot(anticyclones, aes(x = band, fill = as.numeric(OR))) +
   geom_vline(xintercept = 8.5, color = "black", lwd = 1) +
   coord_polar(theta = "y") + 
   theme_void() +
-  scale_fill_gradient2(low = "steelblue4", high = "darkred", midpoint = 1,
+  scale_fill_gradient2(low = "#3f0b4b", high = "#00441b", midpoint = 1,
                        name = "Odds Ratio", limits = c(0, 3),
                        labels = c(0, 1, 2, "3+"),
                        na.value = "grey") +
@@ -333,16 +336,16 @@ p3 <- ggplot(anticyclones, aes(x = band, fill = as.numeric(OR))) +
 p4 <- ggplot(bg, aes(x = x, y = y, fill = OR)) +
   geom_tile() +
   coord_fixed() + 
-  scale_fill_gradient2(low = "steelblue4", high = "darkred", midpoint = 1,
+  scale_fill_gradient2(low = "#3f0b4b", high = "#00441b", midpoint = 1,
                        name = "Odds Ratio", limits = c(0, 3),
                        labels = c(0, 1, 2, "3+"),
                        na.value = "grey") +
   theme_void() +  
   theme(legend.position = "none",
-        panel.background = element_rect(colour = "black")) +
-  ggtitle("Outside\nEddies") +
-  theme(plot.title = element_text(hjust = 0.5, size = 18),
-        legend.title = element_text(hjust = 0.5))
+        plot.title = element_text(hjust = 0.5, size = 18),
+        legend.title = element_text(hjust = 0.5),
+        panel.border = element_rect(colour = "black", linewidth = 0.65)) +
+  ggtitle("Outside\nEddies") 
 
 # get legend for eddy plots
 legend <- get_legend(p3)
@@ -363,14 +366,17 @@ odds_ratios
 # 3. Plot all together
 #----------------------------------------------------------------------------------
 
+# read in eddy amplitude/age/intensity plot
+attributes <- readRDS("output/eddy attributes/plots/eddy_attributes_case_1.rds")
+
 # plot eddies and odds ratios
-grid <- plot_grid(edmap, odds_ratios, ncol = 1, rel_heights = c(0.7, 0.3),
-                  labels = "auto")
-grid
+grid <- plot_grid(edmap, NULL, odds_ratios, NULL, attributes, ncol = 1, rel_heights = c(1, 0.05, 0.4, 0.05, 0.7),
+                  labels = c("a", "", "b", "", "c"))
+grid + ggview::canvas(13, 19)
 
 # export
 ggsave("text/draft figs/new/5. Pointe Geologie Incubation.png", grid,
-       height = 11, width = 12)
+       height = 19, width = 13)
 
 
 #----------------------------------------------------------------------------------
@@ -500,3 +506,34 @@ dualgrid
 ggsave("text/draft figs/new/S5. Pointe Geologie incubation sic.png",
        dualgrid, width = 15, height = 20)
 
+
+# Plot ARS vs sea ice concentration
+tracks <- tracks %>% left_join(deps %>% select(individual_id, start_year))
+p1 <- ggplot(tracks %>% filter(!is.na(start_year) &
+                           start_year %in% c(2015, 2017:2020)), aes(x = dist2ice)) +
+  geom_density(aes(fill = state), alpha = 0.5, col = NA) +
+  theme_minimal() +
+  xlab("Distance to 15% Sea Ice Concentration (km)") +
+  ylab("Density") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+  ylim(0, 0.02) +
+  scale_fill_manual(values = c("ARS" = "red3", "Transit" = "grey30"), name = "State") +
+  facet_wrap(~start_year, nrow = 2, scales = "free_y")
+p1 +
+  ggview::canvas(10, 8)
+
+# export
+ggsave("text/draft figs/X. ADPE Pointe Geologie incubating dist2ice density.png", p1, 
+       height = 8, width = 10)
+
+# mixed effects model
+m_fsle <- lmer(dist2ice ~ state + (1|individual_id) + (1|start_year), 
+               data = tracks %>% filter(start_year %in% c(2015, 2017:2020)))
+summary(m_fsle)
+
+library(emmeans)
+
+em1 <- emmeans(m_fsle, pairwise ~ state)
+summary(em1)
+m1 <- aov(dist2ice ~ state, data = tracks)
+summary(m1)

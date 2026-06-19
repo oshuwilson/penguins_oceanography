@@ -12,6 +12,7 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02/")
   library(suncalc)
   library(gratia)
   library(gamm4)
+  library(sf)
   library(cowplot)
 }
 
@@ -172,7 +173,8 @@ for(z in 1:length(dep_years)){
     theme_bw() +
     scale_x_continuous(expand = c(0, 0)) +
     scale_y_continuous(expand = c(0, 0)) +
-    ggtitle(year)
+    ggtitle(year) +
+    ggspatial::annotation_scale(style = "ticks", location = "bl")
   print(p1)
   
   # store plot in list
@@ -203,18 +205,22 @@ edmap
 # 2. GAMM circular plots
 #----------------------------------------------------------------------------------
 
-# read in GAMM
-m1 <- readRDS(paste0("output/models/EMPE/Amanda Bay post-breeding gamm.rds"))
+# # read in GAMM
+# m1 <- readRDS(paste0("output/models/EMPE/Amanda Bay post-breeding gamm.rds"))
+# 
+# # get smooths
+# sm <- smooth_estimates(m1$gam, n = 1000) %>%
+#   add_confint()
+# 
+# # apply exponential to smooths for odds ratios
+# sm <- sm %>%
+#   mutate(.estimate = exp(.estimate),
+#          .lower_ci = exp(.lower_ci),
+#          .upper_ci = exp(.upper_ci))
 
-# get smooths
-sm <- smooth_estimates(m1$gam, n = 1000) %>%
-  add_confint()
+# read in smooths
+sm <- readRDS("output/GAMMs/smooths/EMPE/Amanda Bay post-breeding smooths.rds")
 
-# apply exponential to smooths for odds ratios
-sm <- sm %>%
-  mutate(.estimate = exp(.estimate),
-         .lower_ci = exp(.lower_ci),
-         .upper_ci = exp(.upper_ci))
 
 # average odds ratios over .5 intervals
 sm2 <- sm %>%
@@ -289,7 +295,7 @@ p2 <- ggplot(cyclones, aes(x = band, fill = as.numeric(OR))) +
   geom_vline(xintercept = 8.5, color = "black", lwd = 1) +
   coord_polar(theta = "y") + 
   theme_void() +
-  scale_fill_gradient2(low = "steelblue4", high = "darkred", midpoint = 1,
+  scale_fill_gradient2(low = "#3f0b4b", high = "#00441b", midpoint = 1,
                        name = "Odds Ratio", limits = c(0, 3),
                        labels = c(0, 1, 2, "3+"),
                        na.value = "grey") +
@@ -306,7 +312,7 @@ p3 <- ggplot(anticyclones, aes(x = band, fill = as.numeric(OR))) +
   geom_vline(xintercept = 8.5, color = "black", lwd = 1) +
   coord_polar(theta = "y") + 
   theme_void() +
-  scale_fill_gradient2(low = "steelblue4", high = "darkred", midpoint = 1,
+  scale_fill_gradient2(low = "#3f0b4b", high = "#00441b", midpoint = 1,
                        name = "Odds Ratio", limits = c(0, 3),
                        labels = c(0, 1, 2, "3+"),
                        na.value = "grey") +
@@ -318,7 +324,7 @@ p3 <- ggplot(anticyclones, aes(x = band, fill = as.numeric(OR))) +
 p4 <- ggplot(bg, aes(x = x, y = y, fill = OR)) +
   geom_tile() +
   coord_fixed() + 
-  scale_fill_gradient2(low = "steelblue4", high = "darkred", midpoint = 1,
+  scale_fill_gradient2(low = "#3f0b4b", high = "#00441b", midpoint = 1,
                        name = "Odds Ratio", limits = c(0, 3),
                        labels = c(0, 1, 2, "3+"),
                        na.value = "grey") +
@@ -348,14 +354,17 @@ odds_ratios
 # 3. Plot all together
 #----------------------------------------------------------------------------------
 
+# read in eddy amplitude/age/intensity plot
+attributes <- readRDS("output/eddy attributes/plots/eddy_attributes_case_2.rds")
+
 # plot eddies and odds ratios
-grid <- plot_grid(edmap, odds_ratios, ncol = 1, rel_heights = c(0.7, 0.3),
-                  labels = "auto")
-grid
+grid <- plot_grid(edmap, NULL, odds_ratios, NULL, attributes, ncol = 1, rel_heights = c(0.7, 0.05, 0.3, 0.05, 0.5),
+                  labels = c("a", "", "b", "", "c"))
+grid + ggview::canvas(12, 17)
 
 # export
 ggsave("text/draft figs/new/6. Amanda Bay Fledglings.png", grid, 
-       height = 12, width = 11)
+       height = 17, width = 12)
 
 
 #----------------------------------------------------------------------------------
@@ -396,5 +405,8 @@ sm1 %>%
   pull(.estimate)
 sm1 %>%
   filter(ed2 > 2.8) %>%
+  pull(.estimate)
+sm1 %>% 
+  filter(ed2 < -1.8 & ed2 > -2.2) %>%
   pull(.estimate)
 summary(m1)

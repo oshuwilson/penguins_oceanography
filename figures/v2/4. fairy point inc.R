@@ -13,6 +13,9 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02/")
   library(gratia)
   library(gamm4)
   library(cowplot)
+  library(lme4)
+  library(lmerTest)
+  library(emmeans)
 }
 
 # coastline
@@ -168,7 +171,8 @@ for(z in 1:length(dep_years)){
     theme_bw() +
     scale_x_continuous(expand = c(0, 0)) +
     scale_y_continuous(expand = c(0, 0)) +
-    ggtitle(year)
+    ggtitle(year) +
+    ggspatial::annotation_scale(style = "ticks", location = "bl")
   print(p1)
   
   # store plot in list
@@ -200,18 +204,21 @@ edmap <- plot_grid(edmap, eddy_legend, rel_widths = c(0.8, 0.2))
 # 2. GAMM circular plots
 #----------------------------------------------------------------------------------
 
-# read in GAMM
-m1 <- readRDS(paste0("output/models/MAPE/Fairy Point, Bird Island incubation gamm.rds"))
+# # read in GAMM
+# m1 <- readRDS(paste0("output/models/MAPE/Fairy Point, Bird Island incubation gamm.rds"))
+# 
+# # get smooths
+# sm <- smooth_estimates(m1$gam, n = 1000) %>%
+#   add_confint()
+# 
+# # apply exponential to smooths for odds ratios
+# sm <- sm %>%
+#   mutate(.estimate = exp(.estimate),
+#          .lower_ci = exp(.lower_ci),
+#          .upper_ci = exp(.upper_ci))
 
-# get smooths
-sm <- smooth_estimates(m1$gam, n = 1000) %>%
-  add_confint()
-
-# apply exponential to smooths for odds ratios
-sm <- sm %>%
-  mutate(.estimate = exp(.estimate),
-         .lower_ci = exp(.lower_ci),
-         .upper_ci = exp(.upper_ci))
+# read in smooths
+sm <- readRDS("output/GAMMs/smooths/MAPE/Fairy Point, Bird Island incubation smooths.rds")
 
 # average odds ratios over .5 intervals
 sm2 <- sm %>%
@@ -286,7 +293,7 @@ p2 <- ggplot(cyclones, aes(x = band, fill = as.numeric(OR))) +
   geom_vline(xintercept = 8.5, color = "black", lwd = 1) +
   coord_polar(theta = "y") + 
   theme_void() +
-  scale_fill_gradient2(low = "steelblue4", high = "darkred", midpoint = 1,
+  scale_fill_gradient2(low = "#3f0b4b", high = "#00441b", midpoint = 1,
                        name = "Odds Ratio", limits = c(0, 3),
                        labels = c(0, 1, 2, "3+"),
                        na.value = "grey") +
@@ -303,7 +310,7 @@ p3 <- ggplot(anticyclones, aes(x = band, fill = as.numeric(OR))) +
   geom_vline(xintercept = 8.5, color = "black", lwd = 1) +
   coord_polar(theta = "y") + 
   theme_void() +
-  scale_fill_gradient2(low = "steelblue4", high = "darkred", midpoint = 1,
+  scale_fill_gradient2(low = "#3f0b4b", high = "#00441b", midpoint = 1,
                        name = "Odds Ratio", limits = c(0, 3),
                        labels = c(0, 1, 2, "3+"),
                        na.value = "grey") +
@@ -315,7 +322,7 @@ p3 <- ggplot(anticyclones, aes(x = band, fill = as.numeric(OR))) +
 p4 <- ggplot(bg, aes(x = x, y = y, fill = OR)) +
   geom_tile() +
   coord_fixed() + 
-  scale_fill_gradient2(low = "steelblue4", high = "darkred", midpoint = 1,
+  scale_fill_gradient2(low = "#3f0b4b", high = "#00441b", midpoint = 1,
                        name = "Odds Ratio", limits = c(0, 3),
                        labels = c(0, 1, 2, "3+"),
                        na.value = "grey") +
@@ -344,14 +351,17 @@ odds_ratios
 # 3. Plot all together
 #----------------------------------------------------------------------------------
 
+# read in eddy amplitude/age/intensity plot
+attributes <- readRDS("output/eddy attributes/plots/eddy_attributes_case_5.rds")
+
 # plot eddies and odds ratios
-grid <- plot_grid(edmap, odds_ratios, ncol = 1, rel_heights = c(0.7, 0.3),
-                  labels = "auto")
-grid
+grid <- plot_grid(edmap, NULL, odds_ratios, NULL, attributes, ncol = 1, rel_heights = c(1, 0.1, 0.5, 0.1, 0.7),
+                  labels = c("a", "", "b", "", "c"))
+grid + ggview::canvas(12, 18)
 
 # export
 ggsave("text/draft figs/new/4. Fairy Point Incubation.png", grid, 
-       height = 12, width = 11)
+       height = 18, width = 12)
 
 #----------------------------------------------------------------------------------
 # 4. Supplementary - Eddies and FSLE
@@ -391,6 +401,22 @@ for(z in 1:length(dep_years)){
   # crop 
   fsle <- crop(fsle, e)
   
+  # project fsle
+  fsle <- project(fsle, "epsg:4326")
+  
+  # extract fsle to ARS locations
+  trax_year$fsle <- extract(fsle, trax_year, ID = F)
+  print(ggplot(trax_year, aes(x = fsle)) +
+          geom_density(aes(fill = state), alpha = 0.5) +
+          theme_bw())
+  
+  # create dataframe of fsle vs state
+  fsle_df <- trax_year %>%
+    as.data.frame() %>%
+    select(state, fsle, individual_id) %>%
+    drop_na() %>%
+    mutate(this_year = year)
+  
   # clamp
   fsle <- clamp(fsle, -0.2, 0)
   
@@ -419,6 +445,13 @@ for(z in 1:length(dep_years)){
     dualplots <- list()
   }
   dualplots[[z]] <- dualplot
+  
+  # join fsle dfs
+  if(z == 1){
+    fsle_dfs <- fsle_df
+  } else {
+    fsle_dfs <- bind_rows(fsle_dfs, fsle_df)
+  }
 }
 
 # get legend of fsle
@@ -441,3 +474,34 @@ dualgrid <- plot_grid(dualgrid, legends, nrow = 2, rel_heights = c(0.8, 0.2))
 # export
 ggsave("text/draft figs/new/S4. Fairy Point Incubation.png", dualgrid, 
        height = 14, width = 16)
+
+
+# plot fsle density by state
+fsleplot2 <- ggplot(fsle_dfs %>% filter(state %in% c("ARS", "Transit")), aes(x = fsle)) +
+  geom_density(aes(fill = state), alpha = 0.5, col = NA) +
+  theme_minimal() +
+  xlab("Finite Size Lyapunov Exponent") +
+  ylab("Density") +
+  scale_fill_manual(values = c("ARS" = "red3", "Transit" = "grey30"), name = "State") +
+  facet_wrap(~this_year, nrow = 2, scales = "free_y") 
+fsleplot2 +
+  ggview::canvas(10, 8)
+
+# export
+ggsave("text/draft figs/X. MAPE Fairy Point Incubation FSLE density.png", fsleplot2, 
+       height = 8, width = 10)
+
+
+# mean by state
+fsle_dfs %>%
+  group_by(state) %>%
+  summarise(mean_fsle = mean(fsle, na.rm = T),
+            median_fsle = median(fsle, na.rm = T),
+            sd_fsle = sd(fsle, na.rm = T))
+
+# mixed effects model
+m_fsle <- lmer(fsle ~ state + (1|individual_id), data = fsle_dfs)
+summary(m_fsle)
+
+em1 <- emmeans(m_fsle, pairwise ~ state)
+summary(em1)

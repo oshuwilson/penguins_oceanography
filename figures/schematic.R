@@ -307,7 +307,7 @@ p7 <- ggplot(cyclones, aes(x = band, fill = as.numeric(OR))) +
   geom_vline(xintercept = 8.5, color = "black", lwd = 1) +
   coord_polar(theta = "y") + 
   theme_void() +
-  scale_fill_gradient2(low = "steelblue4", high = "darkred", midpoint = 1,
+  scale_fill_gradient2(low = "#3f0b4b", high = "#00441b", midpoint = 1,
                        name = "Odds Ratio", limits = c(0, 3),
                        labels = c(0, 1, 2, "3+"),
                        na.value = "grey") +
@@ -325,7 +325,7 @@ p8 <- ggplot(anticyclones, aes(x = band, fill = as.numeric(OR))) +
   geom_vline(xintercept = 8.5, color = "black", lwd = 1) +
   coord_polar(theta = "y") + 
   theme_void() +
-  scale_fill_gradient2(low = "steelblue4", high = "darkred", midpoint = 1,
+  scale_fill_gradient2(low = "#3f0b4b", high = "#00441b", midpoint = 1,
                        name = "Odds Ratio", limits = c(0, 3),
                        labels = c(0, 1, 2, "3+"),
                        na.value = "grey") +

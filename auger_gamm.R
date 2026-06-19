@@ -17,34 +17,25 @@ setwd("/iridisfs/scratch/jcw2g17/Chapter_02/")
 }
 
 # read in species site stage info to loop over
-srs <- read.csv("data/tracks/species_site_stage_v2.csv")
+srs <- read.csv("data/tracks/species_site_stage_auger.csv")
 
-# limit to examples with pack ice
-#srs <- srs %>% filter(rm_pack_ice == "yes")
+# keep stages that aren't central-place-foraging
+# srs <- srs %>% 
+#   filter(stage %in% c("post-breeding", "pre-moult", "post-moult", "fledglings") |
+#            species == "KIPE" & stage == "late chick-rearing") # KIPE late chick-rearing is free-roaming
 
-# filter to Adelies, Chinstraps, and Emperors
-srs <- srs %>% 
-  filter(species %in% c("ADPE", "CHPE", "EMPE"))
-
-# remove auger examples
-srs <- srs %>% filter(auger == "")
+i <- 1
 
 # isolate colony and breeding stage
-for(i in 19:nrow(srs)){
+for(i in 1:nrow(srs)){
+  
   this.species <- srs$species[i]
   this.site <- srs$site[i]
   this.stage <- srs$stage[i]
-  area <- srs$island[i]
-  
-  # is rm_pack_ice yes 
-  if(srs$rm_pack_ice[i] == "yes"){
-    rm_pack_ice <- T
-  } else {
-    rm_pack_ice <- F
-  }
+  print(paste0("Starting ", this.species, " ", this.site, " ", this.stage))
   
   # load in hmm checked tracks
-  tracks <- readRDS(paste0("output/hmm/hmm_tracks_by_colony/", this.species, "/", this.site, " ", this.stage, " tracks checked.rds"))
+  tracks <- readRDS(paste0("output/auger_extractions/", this.species, "/", this.site, "_", this.stage, "_extracted.RDS"))
   
   # if number of distinct individuals is less than 3, skip
   if(n_distinct(tracks$individual_id) < 3){
@@ -53,34 +44,16 @@ for(i in 19:nrow(srs)){
   
   # 1. Process Data
   
-  # if fledglings, rename stage to post-breeding/pre-moult depending on species
-  if(this.stage == "fledglings"){
-    if(this.species == "ADPE"){
-      og.stage <- "pre-moult"
-    } else {
-      og.stage <- "post-breeding"
-    }
-  } else {
-    og.stage <- this.stage
-  }
-  
-  #read in original tracks to get lat/lons and error info
-  original <- readRDS(paste0("output/tracks/", this.species, "/", area, " ", og.stage, " tracks.RDS"))
-  
-  #append latitudes, longitudes, and errors to state tracks
-  tracks <- tracks %>% 
-    left_join(select(original, individual_id, date, lon, lat, 
-                     longitude_se, latitude_se, 
-                     lon_se_km, lat_se_km))
-  
   #remove tracks with large error
   tracks <- tracks %>%
     filter((latitude_se < 0.05 & longitude_se < 0.125 | #greater allowance for longitude as this can be compressed at poles
-             (lon_se_km < 5000 & lat_se_km < 5000)))
+             (lon_se_km < 5 & lat_se_km < 5)))
   
   #create column in date format for suncalc
   tracks <- tracks %>%
-    rename(datetime = date) %>%
+    rename(datetime = date,
+           lat = y,
+           lon = x) %>%
     mutate(date = as_date(datetime))
   
   #get dawn times
@@ -103,44 +76,33 @@ for(i in 19:nrow(srs)){
   
   # resample non-eddies to 0
   ars <- ars %>%
-    mutate(ed2 = ifelse(eddies > -1 & eddies < 1, 0, eddies))
+    mutate(ed2 = ifelse(eddies_auger > -1 & eddies_auger < 1, 0, eddies_auger))
   
   # read in background samples
-  back <- readRDS(paste0("output/background/", this.species, "/", this.site, " ", this.stage, " background.rds"))
+  back <- readRDS(paste0("output/auger_extractions/", this.species, "/", this.site, "_", this.stage, "_background_extracted.RDS"))
   
   # resample non-eddies to 0
   back <- back %>%
-    mutate(ed2 = ifelse(eddies > -1 & eddies < 1, 0, eddies))
+    mutate(ed2 = ifelse(eddies_auger > -1 & eddies_auger < 1, 0, eddies_auger))
   
   # create binary presence/absence cols
   ars$pa <- 1
   back$pa <- 0
   
   # select key variables
-  columns <- c("individual_id", "ed2", "depth", "sic", "curr", "pa", "x", "y")
   ars <- ars %>% 
-    select(all_of(columns))
+    select(individual_id, ed2, depth, curr, sic, pa)
   back <- back %>%
-    select(all_of(columns))
-  
-  # reproject ars to epsg:4326
-  ars <- ars %>%
-    vect(geom = c("x", "y"), crs = "epsg:6932") %>%
-    project("epsg:4326") %>%
-    as.data.frame(geom = "XY")
-  
-  # join datasets together
-  data <- bind_rows(ars, back)
-  
-  # remove sea ice concentrations above 10%
-  if(rm_pack_ice == T){
-    data <- data %>%
-      filter(sic < 0.1)
-  }
+    select(individual_id, ed2, depth, curr, sic, pa)
   
   
   # 2. GAMM
   
+  # print
+  print("Fitting GAMM")
+  
+  # join datasets together
+  data <- bind_rows(ars, back)
   
   # if eddies vary in only one or no individuals, export smooth file as 0 and skip
   smallvar <- ars %>%
@@ -152,7 +114,7 @@ for(i in 19:nrow(srs)){
     nrow()
   if(ee >= nrow(smallvar) - 1){
     sm <- data.frame(ed2 = 0, .estimate = 0, .lower_ci = 0, .upper_ci = 0)
-    write.csv(sm, paste0("output/gamms/smooths/", this.species, "/", this.site, " ", this.stage, " ed2.csv"))
+    saveRDS(sm, paste0("output/gamms/smooths/", this.species, "/", this.site, " ", this.stage, " auger smooths.RDS"))
     next
   }
   
@@ -212,18 +174,17 @@ for(i in 19:nrow(srs)){
   # 4. Export
   
   # export model
-  saveRDS(m1, paste0("output/gamms/models/", this.species, "/", this.site, " ", this.stage, " gamm.rds"))
+  saveRDS(m1, paste0("output/auger gamms/models/", this.species, " ", this.site, " ", this.stage, " auger gamm.rds"))
   
   # export smooths
-  saveRDS(sm, paste0("output/gamms/smooths/", this.species, "/", this.site, " ", this.stage, " smooths.rds"))
+  saveRDS(sm, paste0("output/auger gamms/smooths/", this.species, " ", this.site, " ", this.stage, " auger smooths.rds"))
   
   # export gamm plot
-  ggsave(paste0("output/gamms/plots/", this.species, "/", this.site, " ", this.stage, " gamm.png"), 
+  ggsave(paste0("output/auger gamms/plots/", this.species, " ", this.site, " ", this.stage, " auger gamm.png"), 
          p1, width = 10, height = 6, create.dir = T)
   
   # export autocorrelation plot
   saveRDS(acf1, paste0("output/gamms/acf/", this.species, " ", this.site, " ", this.stage, " acf.rds"))
-  
   
   # 5. Model Diagnostics
   
