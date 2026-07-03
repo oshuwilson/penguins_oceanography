@@ -46,9 +46,7 @@ for(this.site in regions){
   for(this.stage in stages){
 
     #read in tracks
-    tracks <- readRDS(file = paste0("output/extractions/", this.species, "/", this.site, "_", this.stage, "_extracted.rds"))
-    tracks <- tracks %>% 
-      filter(pa == "presence")
+    tracks <- readRDS(file = paste0("output/tracks/", this.species, "/", this.site, " ", this.stage, " tracks.rds"))
     
     #read in relevant metadata
     meta <- readRDS("data/metadata.RDS")

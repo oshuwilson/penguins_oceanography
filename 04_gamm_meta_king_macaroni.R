@@ -2,13 +2,6 @@
 # Assess eddy usage by feeding time 
 #----------------------------------
 
-# changes to apply to SIC GAMMs as well
-# 1. reduce error threshold (done here)
-# 2. standardise covariates (done here)
-# 3. account for spatiotemporal autocorrelation (separate preprocessing script, gamm correlation check here)
-# 4. collect GAMM prediction metrics (e.g. AUC, CBI) from models excluding some individuals (done here) 
-# 5. fit a GAMM without eddies and collect AIC/BIC statistics for model selection (done here)
-
 rm(list=ls())
 setwd("/iridisfs/scratch/jcw2g17/Chapter_02/")
 

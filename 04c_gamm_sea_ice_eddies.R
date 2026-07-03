@@ -19,13 +19,6 @@ setwd("/iridisfs/scratch/jcw2g17/Chapter_02/")
 # read in species site stage info to loop over
 srs <- read.csv("data/tracks/species_site_stage_auger.csv")
 
-# keep stages that aren't central-place-foraging
-# srs <- srs %>% 
-#   filter(stage %in% c("post-breeding", "pre-moult", "post-moult", "fledglings") |
-#            species == "KIPE" & stage == "late chick-rearing") # KIPE late chick-rearing is free-roaming
-
-i <- 1
-
 # isolate colony and breeding stage
 for(i in 1:nrow(srs)){
   
