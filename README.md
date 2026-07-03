@@ -63,8 +63,3 @@ DOI
 ## Contact
 
 **Author:** Joshua Wilson
-* Oceanographic datasets from publicly available Earth observation and ocean modelling products.
-* Open-source R/Python packages that support movement ecology and spatial analysis.
-
-Special thanks to all collaborators and data providers whose contributions make this work possible.
-
