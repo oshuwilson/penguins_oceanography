@@ -1,6 +1,6 @@
-#----------------------------------
-# Assess eddy usage by feeding time 
-#----------------------------------
+#-------------------------------------------------------------------------------
+# Model ARS as a function of eddies for case studies using sea ice eddies
+#-------------------------------------------------------------------------------
 
 rm(list=ls())
 setwd("/iridisfs/scratch/jcw2g17/Chapter_02/")
@@ -16,7 +16,7 @@ setwd("/iridisfs/scratch/jcw2g17/Chapter_02/")
   library(tidysdm)
 }
 
-# read in species site stage info to loop over
+# read in species site stage info to loop over for sea ice case studies
 srs <- read.csv("data/tracks/species_site_stage_auger.csv")
 
 # isolate colony and breeding stage
@@ -27,19 +27,35 @@ for(i in 1:nrow(srs)){
   this.stage <- srs$stage[i]
   print(paste0("Starting ", this.species, " ", this.site, " ", this.stage))
   
-  # load in hmm checked tracks
-  tracks <- readRDS(paste0("output/auger_extractions/", this.species, "/", this.site, "_", this.stage, "_extracted.RDS"))
+  # load in extracted data
+  extraction <- readRDS(paste0("output/extractions/", this.species, "/", this.site, " ", this.stage, " extracted.rds"))
+  
+  # split into tracks and background
+  tracks <- extraction %>% filter(pa == "presence")
+  back <- extraction %>% filter(pa == "absence")
   
   # if number of distinct individuals is less than 3, skip
   if(n_distinct(tracks$individual_id) < 3){
     next
   }
   
-  # 1. Process Data
+  
+  #-----------------------------------------------------------------------------
+  # Preprocess Data
+  #-----------------------------------------------------------------------------
+  
+  #read in original tracks to get lat/lons and error info
+  original <- readRDS(paste0("output/tracks/", this.species, "/", area, " ", this.stage, " tracks.RDS"))
+  
+  #append latitudes, longitudes, and errors to state tracks
+  tracks <- tracks %>% 
+    left_join(select(original, individual_id, date, lon, lat, 
+                     longitude_se, latitude_se, 
+                     lon_se_km, lat_se_km))
   
   #remove tracks with large error
   tracks <- tracks %>%
-    filter((latitude_se < 0.05 & longitude_se < 0.125 | #greater allowance for longitude as this can be compressed at poles
+    filter((latitude_se < 0.05 & longitude_se < 0.125 | #greater allowance for longitude as this is compressed at poles
              (lon_se_km < 5 & lat_se_km < 5)))
   
   #create column in date format for suncalc
@@ -71,9 +87,6 @@ for(i in 1:nrow(srs)){
   ars <- ars %>%
     mutate(ed2 = ifelse(eddies_auger > -1 & eddies_auger < 1, 0, eddies_auger))
   
-  # read in background samples
-  back <- readRDS(paste0("output/auger_extractions/", this.species, "/", this.site, "_", this.stage, "_background_extracted.RDS"))
-  
   # resample non-eddies to 0
   back <- back %>%
     mutate(ed2 = ifelse(eddies_auger > -1 & eddies_auger < 1, 0, eddies_auger))
@@ -89,7 +102,9 @@ for(i in 1:nrow(srs)){
     select(individual_id, ed2, depth, curr, sic, pa)
   
   
-  # 2. GAMM
+  #-----------------------------------------------------------------------------
+  # Fit GAMM
+  #-----------------------------------------------------------------------------
   
   # print
   print("Fitting GAMM")
@@ -140,7 +155,10 @@ for(i in 1:nrow(srs)){
   aic_m1 <- AIC(m1$mer)
   bic_m1 <- BIC(m1$mer)
   
-  # 3. Odds Ratios
+  
+  #-----------------------------------------------------------------------------
+  # Get Odds Ratios
+  #-----------------------------------------------------------------------------
   
   # get smooths
   sm <- smooth_estimates(m1$gam, n = 1000) %>%
@@ -164,7 +182,9 @@ for(i in 1:nrow(srs)){
   acf1 <- acf(residuals(m1$gam))
   
   
-  # 4. Export
+  #-----------------------------------------------------------------------------
+  # Export Outputs
+  #-----------------------------------------------------------------------------
   
   # export model
   saveRDS(m1, paste0("output/auger gamms/models/", this.species, " ", this.site, " ", this.stage, " auger gamm.rds"))
@@ -179,7 +199,10 @@ for(i in 1:nrow(srs)){
   # export autocorrelation plot
   saveRDS(acf1, paste0("output/gamms/acf/", this.species, " ", this.site, " ", this.stage, " acf.rds"))
   
-  # 5. Model Diagnostics
+  
+  #-----------------------------------------------------------------------------
+  # Model Diagnostics
+  #-----------------------------------------------------------------------------
   
   # print model diagnostics initiation
   print("Calculating delta AIC")

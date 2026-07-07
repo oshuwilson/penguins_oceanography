@@ -1,13 +1,11 @@
-#-----------------------------------
-# Remove questionably assigned trips
-#-----------------------------------
+#-------------------------------------------------------------------------------
+# Remove obvious errors from HMM state assigment
+#-------------------------------------------------------------------------------
 
+rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 
 library(tidyverse)
-
-#clear environment
-rm(list=ls())
 
 # define species, site, and stage
 this.species <- "EMPE"
@@ -22,8 +20,7 @@ unique(as.character(tracks$ID))
 # list trips for removal (using PDF plot)
 # trips can be removed if 
 # a) erroneous loops created by aniMotum become ARS
-# b) ARS and transit behaviour is visually questionable
-# c) trips are all one category (generally very short trips)
+# b) trips are all one category (generally very short trips)
 rm_trips <- c()
 
 # remove trips with poor state assignments
@@ -36,7 +33,7 @@ newn <- length(unique(tracks$ID))
 if(nID - newn == length(rm_trips)){
   print("success")
 } else {
-  print("fail")
+  print("fail - please check all removal IDs are correct")
   rm(list=ls())
 }
 

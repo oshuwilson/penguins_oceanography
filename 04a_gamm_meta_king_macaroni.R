@@ -1,6 +1,6 @@
-#----------------------------------
-# Assess eddy usage by feeding time 
-#----------------------------------
+#-------------------------------------------------------------------------------
+# Model ARS as a function of eddies for King and Macaroni Penguins
+#-------------------------------------------------------------------------------
 
 rm(list=ls())
 setwd("/iridisfs/scratch/jcw2g17/Chapter_02/")
@@ -20,10 +20,8 @@ setwd("/iridisfs/scratch/jcw2g17/Chapter_02/")
 srs <- read.csv("data/tracks/species_site_stage_v2.csv")
 srs <- srs %>% filter(species %in% c("KIPE", "MAPE"))
 
-# sites of interest
-
 # isolate colony and breeding stage
-for(i in 18){
+for(i in 1:nrow(srs)){
   this.species <- srs$species[i]
   this.site <- srs$site[i]
   this.stage <- srs$stage[i]
@@ -32,15 +30,21 @@ for(i in 18){
   # print start 
   print(paste0("Starting ", this.species, " ", this.site, " ", this.stage))
   
-  # load in hmm checked tracks
-  tracks <- readRDS(paste0("output/hmm/hmm_tracks_by_colony/", this.species, "/", this.site, " ", this.stage, " tracks checked.rds"))
+  # load in extracted data
+  extraction <- readRDS(paste0("output/extractions/", this.species, "/", this.site, " ", this.stage, " extracted.rds"))
+  
+  # split into tracks and background
+  tracks <- extraction %>% filter(pa == "presence")
+  back <- extraction %>% filter(pa == "absence")
   
   # if number of distinct individuals is less than 3, skip
   if(n_distinct(tracks$individual_id) < 3){
     next
   }
   
-  # 1. Process Data
+  #-----------------------------------------------------------------------------
+  # Preprocess Data
+  #-----------------------------------------------------------------------------
   
   #read in original tracks to get lat/lons and error info
   original <- readRDS(paste0("output/tracks/", this.species, "/", area, " ", this.stage, " tracks.RDS"))
@@ -53,7 +57,7 @@ for(i in 18){
   
   #remove tracks with large error
   tracks <- tracks %>%
-    filter((latitude_se < 0.05 & longitude_se < 0.125 | #greater allowance for longitude as this can be compressed at poles
+    filter((latitude_se < 0.05 & longitude_se < 0.125 | #greater allowance for longitude as this is compressed at poles
              (lon_se_km < 5000 & lat_se_km < 5000)))
   
   #create column in date format for suncalc
@@ -83,14 +87,9 @@ for(i in 18){
   ars <- ars %>%
     mutate(ed2 = ifelse(eddies > -1 & eddies < 1, 0, eddies))
   
-  # read in background samples
-  back <- readRDS(paste0("output/background/", this.species, "/", this.site, " ", this.stage, " background.rds"))
-  
-  # resample non-eddies to 0
+  # resample non-eddies in background data to 0
   back <- back %>%
     mutate(ed2 = ifelse(eddies > -1 & eddies < 1, 0, eddies))
-  
-  # if no SIC in background, allow
   
   # create binary presence/absence cols
   ars$pa <- 1
@@ -103,17 +102,13 @@ for(i in 18){
   back <- back %>%
     select(all_of(columns))
   
-  # reproject ars to epsg:4326
-  ars <- ars %>%
-    vect(geom = c("x", "y"), crs = "epsg:6932") %>%
-    project("epsg:4326") %>%
-    as.data.frame(geom = "XY")
-  
   # join datasets together
   data <- bind_rows(ars, back)
   
   
-  # 3. GAMM
+  #-----------------------------------------------------------------------------
+  # Fit GAMM
+  #-----------------------------------------------------------------------------
   
   # print gamm initiation
   print("Fitting GAMM")
@@ -149,7 +144,10 @@ for(i in 18){
   aic_m1 <- AIC(m1$mer)
   bic_m1 <- BIC(m1$mer)
   
-  # 3. Odds Ratios
+  
+  #-----------------------------------------------------------------------------
+  # Extract Odds Ratios
+  #-----------------------------------------------------------------------------
   
   # get smooths
   sm <- smooth_estimates(m1$gam, n = 1000) %>%
@@ -174,7 +172,9 @@ for(i in 18){
   acf1 <- acf(residuals(m1$gam))
   
   
-  # 4. Export
+  #-----------------------------------------------------------------------------
+  # Export Outputs
+  #-----------------------------------------------------------------------------
   
   # export model
   saveRDS(m1, paste0("output/gamms/models/", this.species, "/", this.site, " ", this.stage, " gamm.rds"))
@@ -190,7 +190,9 @@ for(i in 18){
   saveRDS(acf1, paste0("output/gamms/acf/", this.species, " ", this.site, " ", this.stage, " acf.rds"))
   
   
-  # 5. Model Diagnostics
+  #-----------------------------------------------------------------------------
+  # Model Diagnostics
+  #-----------------------------------------------------------------------------
   
   # print model diagnostics initiation
   print("Calculating delta AIC")
@@ -263,4 +265,3 @@ for(i in 18){
   print(paste0(this.species, " ", this.site, " ", this.stage, " complete"))
   
 }
-

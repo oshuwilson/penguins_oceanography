@@ -1,6 +1,6 @@
-#---------------------------------------------------------------
-# Background Sampling for Central Place Foraging Breeding Stages
-#---------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# Background sampling for central place foraging breeding stages
+#-------------------------------------------------------------------------------
 
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02/")
@@ -12,6 +12,9 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02/")
   library(geosphere)
 }
 
+# prioritise terra extract
+extract <- terra::extract
+
 # read in species, site, and stage info to loop over populations
 srs <- read.csv("data/tracks/species_site_stage_v2.csv")
 
@@ -20,17 +23,15 @@ srs <- srs %>%
   filter(!stage %in% c("post-breeding", "pre-moult", "post-moult")) %>%
   filter(species != "KIPE" | stage != "late chick-rearing") #MAPE late chick-rearing is CPF
 
-# sites of interest
-srs <- srs %>% 
-  filter(site == "Rookery Bay, South Georgia")
-
 # loop over each breeding stage at each colony
 for(j in 1:nrow(srs)){
   
   #cleanup 
-  rm(list = setdiff(ls(), c("j", "srs")))
+  rm(list = setdiff(ls(), c("j", "srs", "extract")))
   
-  # 1. Data Preparation
+  #-----------------------------------------------------------------------------
+  # Data Preparation
+  #-----------------------------------------------------------------------------
   
   # colony and breeding stage values
   this.species <- srs$species[j]
@@ -57,7 +58,9 @@ for(j in 1:nrow(srs)){
   coast <- readRDS("data/land_vect.RDS")
   
   
-  # 2. Create Buffer Around Colony
+  #-----------------------------------------------------------------------------
+  # Create buffer around colony
+  #-----------------------------------------------------------------------------
   
   # get colony location
   colony <- meta %>%
@@ -73,7 +76,9 @@ for(j in 1:nrow(srs)){
   buff <- buffer(colony, max_dist)
   
   
-  # 3. Segment Buffer Based on Track Bearings from Colony
+  #-----------------------------------------------------------------------------
+  # Segment buffer to within observed bearings from colony
+  #-----------------------------------------------------------------------------
   
   # calculate bearings from colony
   trax <- tracks %>%
@@ -102,7 +107,6 @@ for(j in 1:nrow(srs)){
     max_bear <- max_bear - 360
   }
   
-  
   # create lines to segment buffer
   max_end <- destPoint(p = col, b = max_bear, d = max_dist + 100000)
   min_end <- destPoint(p = col, b = min_bear, d = max_dist + 100000)
@@ -128,7 +132,9 @@ for(j in 1:nrow(srs)){
   buff <- buff %>% filter(id == buffno)
   
   
-  # 4. Erase Any Land from Buffer
+  #-----------------------------------------------------------------------------
+  # Erase land from buffer
+  #-----------------------------------------------------------------------------
   
   # crop coast to extent of buffer
   crop_coast <- crop(coast, ext(buff))
@@ -147,7 +153,9 @@ for(j in 1:nrow(srs)){
          plot = p1, width = 10, height = 10, units = "in", dpi = 300)
   
   
-  # 5. Sample Background Points Relative to Distances from Colony
+  #-----------------------------------------------------------------------------
+  # Sample background locations at proportionate densities with distance to col
+  #-----------------------------------------------------------------------------
   
   # within each 5% interval of total distance to colony, what proportion of tracks fall into each band
   distance_props <- tracks$distances %>% cut(., breaks = seq(0, max_dist, length.out = 21)) %>%
@@ -163,7 +171,7 @@ for(j in 1:nrow(srs)){
     buff_band <- buffer(colony, max_dist * 0.05 * i)
     
     # only keep region that intersects with segment
-    buff_band <- intersect(buff_band, buff)
+    buff_band <- terra::intersect(buff_band, buff)
     
     # if not the first band, erase the previous band
     if(i > 1){
@@ -210,34 +218,13 @@ for(j in 1:nrow(srs)){
            individual_id = sample(tracks$individual_id, n(), replace = T))
   
   
-  # 6. Extract Covariate Values
-  
-  # load dynamic extract function
-  source("code/functions/extraction_functions.R")
-  
-  # extract eddies 
-  back <- dynamic_extract("eddies", back)
-  
-  # extract uo and vo to calculate current speed
-  back <- dynamic_extract("uo", back)
-  back <- dynamic_extract("vo", back)
-  back <- back %>%
-    mutate(curr = sqrt(uo^2 + vo^2))
-  
-  # extract depth
-  depth <- rast("E:/Satellite_Data/static/depth/depth.nc")
-  back$depth <- extract(depth, back, ID=F)
-  
-  # for certain species, extract sea ice concentration
-  if(this.species %in% c("ADPE", "CHPE", "EMPE")){
-    back <- dynamic_extract("sic", back)
-  }
-  
+  #-----------------------------------------------------------------------------
+  # Export data
+  #-----------------------------------------------------------------------------
+
   # convert to dataframe
   back <- back %>%
     as.data.frame(geom = "XY")
-  
-  # 7. Export
   
   # save
   saveRDS(back, paste0("output/background/", this.species, "/", this.site, " ", this.stage, " background.rds"))

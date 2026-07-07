@@ -1,6 +1,6 @@
-#-------------------------------------------------------
-#create background samples for each post-breeding colony 
-#-------------------------------------------------------
+#-------------------------------------------------------------------------------
+# Create background samples for each post-breeding case study 
+#-------------------------------------------------------------------------------
 
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02/")
@@ -24,10 +24,6 @@ srs <- srs %>%
 oceans <- readRDS("data/oceans_vect.RDS")
 coast <- readRDS("data/coast_vect.RDS")
 
-# sites of interest
-srs <- srs %>% 
-  filter(site %in% c("Auster Rookery", "Pointe Geologie", "Taylor Glacier", "Admiralty Bay, South Shetland"))
-
 # loop over colonies 
 for(j in 1:nrow(srs)){
   
@@ -36,7 +32,9 @@ for(j in 1:nrow(srs)){
   this.site <- srs$site[j]
   this.stage <- srs$stage[j]
   
-  # 1. Create Polygon to Sample Within
+  #-----------------------------------------------------------------------------
+  # Create minimum convex polygon
+  #-----------------------------------------------------------------------------
   
   # load in hmm checked tracks
   tracks <- readRDS(paste0("output/hmm/hmm_tracks_by_colony/", this.species, "/", this.site, " ", this.stage, " tracks checked.rds"))
@@ -71,7 +69,9 @@ for(j in 1:nrow(srs)){
   plot(mask)
   
   
-  # 2. Generate Background Samples
+  #-----------------------------------------------------------------------------
+  # Generate background samples
+  #-----------------------------------------------------------------------------
   
   # define number of samples as 20,000 if nrow(tracks) < 20,000
   if(nrow(tracks) < 20000){
@@ -94,32 +94,11 @@ for(j in 1:nrow(srs)){
     back <- project(back, "epsg:4326")
   } 
   
-  # 3. Extract Covariate Values
   
-  # load dynamic extract function
-  source("code/functions/extraction_functions.R")
-  
-  # extract eddies 
-  back <- dynamic_extract("eddies", back)
-  
-  # extract uo and vo to calculate current speed
-  back <- dynamic_extract("uo", back)
-  back <- dynamic_extract("vo", back)
-  back <- back %>%
-    mutate(curr = sqrt(uo^2 + vo^2))
-  
-  # extract depth
-  depth <- rast("E:/Satellite_Data/static/depth/depth.nc")
-  back$depth <- extract(depth, back, ID=F)
-  
-  # for certain species, extract sea ice concentration
-  if(this.species %in% c("ADPE", "CHPE", "EMPE")){
-    back <- dynamic_extract("sic", back)
-  }
-  
-  
-  # 4. Export
-  
+  #-----------------------------------------------------------------------------
+  # Export outputs
+  #-----------------------------------------------------------------------------
+
   #convert to dataframe
   back <- as.data.frame(back, geom = "XY")
   

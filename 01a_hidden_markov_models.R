@@ -1,6 +1,6 @@
-#--------------------------------------------------------------------
-# Fit hidden markov models for quality control and initial parameters
-#--------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+# Fit hidden markov models to tracking data
+#-------------------------------------------------------------------------------
 
 rm(list = ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
@@ -16,12 +16,16 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
   library(CCAMLRGIS)
 }
 
-#prioritise dplyr select
+#prioritise dplyr select and terra extract
 select <- dplyr::select
+extract <- terra::extract
 
-# 1. Data preparation
 
-#define variables
+#-------------------------------------------------------------------------------
+# Data Preparation
+#-------------------------------------------------------------------------------
+
+#define which species to work with
 this.species <- "ADPE"
 
 #read in species, region, and stage info 
@@ -31,9 +35,6 @@ srs <- srs %>%
 
 #loop over each study site
 regions <- unique(srs$site)
-
-#limit to site of interest 
-regions <- "King George"
 
 for(this.site in regions){
 
@@ -55,9 +56,19 @@ for(this.site in regions){
                individual_id %in% unique(tracks$individual_id) &
                device_id %in% unique(tracks$device_id))
     
-    #project tracks to stereographic projection
+    #convert tracks to spatvector
     trax <- tracks %>% 
-      vect(geom = c("x", "y"), crs = "epsg:4326") %>%
+      vect(geom = c("lon", "lat"), crs = "epsg:4326")
+    
+    #load in dynamic_extract functions
+    source("code/functions/extraction_functions.R")
+    
+    #get horizontal current velocity for tracks
+    trax <- dynamic_extract("uo", trax)
+    trax <- dynamic_extract("vo", trax)
+    
+    #project tracks to stereographic projection
+    trax <- trax %>%
       project("epsg:6932") 
     
     #plot to visualise
@@ -67,9 +78,11 @@ for(this.site in regions){
     tracks <- as.data.frame(trax, geom = "XY")
     
     
-    # 2. Calculate speed relative to current
+#-------------------------------------------------------------------------------
+# Calculate swimming speed
+#-------------------------------------------------------------------------------
     
-    #calculate horizontal and vertical relocation speed in m/s
+    #calculate horizontal relocation speed in m/s
     tracks <- tracks %>%
       group_by(individual_id, device_id) %>%
       mutate(lag_x = lag(x),
@@ -95,7 +108,10 @@ for(this.site in regions){
     ggplot() + geom_spatvector(data = trax, aes(col = swim_speed))
     
     
-    # 3. Prepare data for hmmTMB
+#-------------------------------------------------------------------------------
+# Sort data for Hidden Markov Models
+#-------------------------------------------------------------------------------
+    
     
     #split tracks into trips using custom function - check plot to see whether buffer distance is appropriate
     source("code/functions/trip_split.R")
@@ -127,7 +143,10 @@ for(this.site in regions){
         TRUE ~ swim_speed))
     
     
-    # 4. Hidden Markov Model
+#-------------------------------------------------------------------------------
+# Fit Hidden Markov Models
+#-------------------------------------------------------------------------------
+    
     
     #establish hidden process model
     hid1 <- MarkovChain$new(data = data, n_states = 2, 
@@ -221,34 +240,21 @@ for(this.site in regions){
     #remove all_hmm for processing
     rm(all_hmm)
     
-    #extract par0 values from top model
-    top_obs <- top_hmm$obs()
-    top_par <- top_obs$par()[,,1]
     
-    #extract individual components
-    spdMean0 <- as.numeric(top_par[1,])
-    spdSD0 <- as.numeric(top_par[2,])
-    angleMean0 <- as.numeric(top_par[3,])
-    angleConc0 <- as.numeric(top_par[4,])
-    
-    #combine together
-    swim_speed <- list(mean = spdMean0, sd = spdSD0)
-    angle <- list(mu = angleMean0, kappa = angleConc0)
-    par0 <- list(swim_speed = swim_speed, angle = angle)
-    
-    
-    # 4. Extract predicted hidden states for quality control
+#-------------------------------------------------------------------------------
+# Get predicted states from HMM for quality control
+#-------------------------------------------------------------------------------
     
     #get predicted hidden states
-    trax$state <- top_hmm$viterbi()
-    trax <- trax %>%
+    data$state <- top_hmm$viterbi()
+    data <- data %>%
       mutate(state = case_when(
         .$state == 1 ~ "ARS",
         .$state == 2 ~ "Transit"
       ))
     
     #convert to terra
-    terr <- trax %>%
+    terr <- data %>%
       as.data.frame() %>%
       vect(geom = c("x", "y"), crs = "epsg:6932")
     
@@ -286,13 +292,12 @@ for(this.site in regions){
     dev.off()
     
     
-    # 5. Export for next steps
-    
-    #export Par0 for state-transition probability HMM
-    saveRDS(par0, paste0("output/hmm/hmm_pars/", this.species, "/", this.site, "_", this.stage, "_par0.rds"))
+#-------------------------------------------------------------------------------
+# Export outputs
+#-------------------------------------------------------------------------------
     
     #export tracks for state assignment quality control
-    saveRDS(trax, paste0("output/hmm/hmm_tracks/", this.species, "/", this.site, "_", this.stage, "_tracks_unchecked.rds"))
+    saveRDS(data, paste0("output/hmm/hmm_tracks/", this.species, "/", this.site, "_", this.stage, "_tracks_unchecked.rds"))
     
     #export swimming speed plot
     p1 <- top_hmm$plot_dist("swim_speed")

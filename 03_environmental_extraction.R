@@ -11,13 +11,18 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
   library(tidyterra)
 }
 
-# 1. Setup
+# prioritise terra extract
+extract <- terra::extract
+
+#-----------------------------------------------------------------------------
+# Data Preparation
+#-----------------------------------------------------------------------------
 
 #define species
-this.species <- "CHPE"
+this.species <- "KIPE"
 
 #load in species/region/stage info for this species
-srs <- read.csv("data/tracks/species_site_stage.csv")
+srs <- read.csv("data/tracks/species_site_stage_v2.csv")
 srs <- srs %>% 
   filter(species == this.species)
 
@@ -37,24 +42,35 @@ for(this.site in regions){
     
     #load in tracks and background data
     tracks <- readRDS(paste0("output/hmm/hmm_tracks_by_colony/", this.species, "/", this.site, " ", this.stage, " tracks checked.rds"))
-    back <- readRDS(paste0("output/background/", this.species, "/", this.site, "_", this.stage, "_background.RDS"))
+    back <- readRDS(paste0("output/background/", this.species, "/", this.site, " ", this.stage, " background.RDS"))
+    
+    # reproject tracks to epsg:4326
+    tracks <- tracks %>%
+      vect(geom = c("x", "y"),
+           crs = "epsg:6932") %>%
+      project("epsg:4326") %>%
+      as.data.frame(geom = "XY") %>%
+      mutate(region = this.site, pa = "presence")
+    
+    # add presence-absence column to background data
+    back <- back %>%
+      mutate(region = this.site, pa = "absence")
     
     #combine the two datasets together
-    tracks <- tracks %>%
-      rename(x = lon, y = lat) %>%
-      mutate(region = this.site, 
-             pa = "presence")
-    back <- back %>%
-      mutate(pa = "absence")
     data <- bind_rows(tracks, back)
+    
+    #only keep important columns
+    data <- data %>%
+      select(individual_id, date, deployment_site,
+             region, pa, state, x, y)
     
     #cleanup
     rm(tracks, back)
     
     
-    # 2. Extract environmental variables
-    
-    # 2.1 Static Variables
+    #-----------------------------------------------------------------------------
+    # Extract static variables
+    #-----------------------------------------------------------------------------
     
     #depth
     depth <- rast("E:/Satellite_Data/static/depth/depth.nc")
@@ -71,7 +87,9 @@ for(this.site in regions){
     data <- data %>% drop_na(depth)
     
     
-    # 2.2 Dynamic Variables 
+    #-----------------------------------------------------------------------------
+    # Extract dynamic variables
+    #-----------------------------------------------------------------------------
     
     #load in dynamic_extract functions
     source("code/functions/extraction_functions.R")
@@ -92,13 +110,15 @@ for(this.site in regions){
     print("eddies")
     
     
-    # 3. Format for export
+    #-----------------------------------------------------------------------------
+    # Export data 
+    #-----------------------------------------------------------------------------
     
     #convert to data frame
     data <- as.data.frame(data, geom = "XY")
     
     #export
-    saveRDS(data, file = paste0("output/extractions/", this.species, "/", this.site, "_", this.stage, "_extracted.RDS"))
+    saveRDS(data, file = paste0("output/extractions/", this.species, "/", this.site, " ", this.stage, " extracted.RDS"))
     
     #print completion
     print(paste0("Extraction complete for ", this.species, " ", this.site, " ", this.stage))

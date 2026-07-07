@@ -1,6 +1,6 @@
-#----------------------------------
-# Assess eddy usage by feeding time 
-#----------------------------------
+#-------------------------------------------------------------------------------
+# Model ARS as a function of eddies for Chinstrap, Adelie and Emperor Penguins
+#-------------------------------------------------------------------------------
 
 rm(list=ls())
 setwd("/iridisfs/scratch/jcw2g17/Chapter_02/")
@@ -19,18 +19,15 @@ setwd("/iridisfs/scratch/jcw2g17/Chapter_02/")
 # read in species site stage info to loop over
 srs <- read.csv("data/tracks/species_site_stage_v2.csv")
 
-# limit to examples with pack ice
-#srs <- srs %>% filter(rm_pack_ice == "yes")
-
 # filter to Adelies, Chinstraps, and Emperors
 srs <- srs %>% 
   filter(species %in% c("ADPE", "CHPE", "EMPE"))
 
-# remove auger examples
+# remove case studies using the sea ice eddy dataset by Matthis Auger
 srs <- srs %>% filter(auger == "")
 
 # isolate colony and breeding stage
-for(i in 19:nrow(srs)){
+for(i in 1:nrow(srs)){
   this.species <- srs$species[i]
   this.site <- srs$site[i]
   this.stage <- srs$stage[i]
@@ -43,17 +40,25 @@ for(i in 19:nrow(srs)){
     rm_pack_ice <- F
   }
   
-  # load in hmm checked tracks
-  tracks <- readRDS(paste0("output/hmm/hmm_tracks_by_colony/", this.species, "/", this.site, " ", this.stage, " tracks checked.rds"))
+  # load in extracted data
+  extraction <- readRDS(paste0("output/extractions/", this.species, "/", this.site, " ", this.stage, " extracted.rds"))
+  
+  # split into tracks and background
+  tracks <- extraction %>% filter(pa == "presence")
+  back <- extraction %>% filter(pa == "absence")
   
   # if number of distinct individuals is less than 3, skip
   if(n_distinct(tracks$individual_id) < 3){
     next
   }
   
-  # 1. Process Data
   
-  # if fledglings, rename stage to post-breeding/pre-moult depending on species
+  #-----------------------------------------------------------------------------
+  # Preprocess Data
+  #-----------------------------------------------------------------------------
+  
+  # if fledglings, define original stage to post-breeding/pre-moult depending on species
+  # RAATD data used these codes instead for fledglings
   if(this.stage == "fledglings"){
     if(this.species == "ADPE"){
       og.stage <- "pre-moult"
@@ -75,7 +80,7 @@ for(i in 19:nrow(srs)){
   
   #remove tracks with large error
   tracks <- tracks %>%
-    filter((latitude_se < 0.05 & longitude_se < 0.125 | #greater allowance for longitude as this can be compressed at poles
+    filter((latitude_se < 0.05 & longitude_se < 0.125 | #greater allowance for longitude as this is compressed at poles
              (lon_se_km < 5000 & lat_se_km < 5000)))
   
   #create column in date format for suncalc
@@ -105,10 +110,7 @@ for(i in 19:nrow(srs)){
   ars <- ars %>%
     mutate(ed2 = ifelse(eddies > -1 & eddies < 1, 0, eddies))
   
-  # read in background samples
-  back <- readRDS(paste0("output/background/", this.species, "/", this.site, " ", this.stage, " background.rds"))
-  
-  # resample non-eddies to 0
+  # resample non-eddies in background data to 0
   back <- back %>%
     mutate(ed2 = ifelse(eddies > -1 & eddies < 1, 0, eddies))
   
@@ -123,24 +125,19 @@ for(i in 19:nrow(srs)){
   back <- back %>%
     select(all_of(columns))
   
-  # reproject ars to epsg:4326
-  ars <- ars %>%
-    vect(geom = c("x", "y"), crs = "epsg:6932") %>%
-    project("epsg:4326") %>%
-    as.data.frame(geom = "XY")
-  
   # join datasets together
   data <- bind_rows(ars, back)
   
-  # remove sea ice concentrations above 10%
+  # remove sea ice concentrations above 10% (poor eddy detection)
   if(rm_pack_ice == T){
     data <- data %>%
       filter(sic < 0.1)
   }
   
-  
-  # 2. GAMM
-  
+
+  #-----------------------------------------------------------------------------
+  # Fit GAMM
+  #-----------------------------------------------------------------------------
   
   # if eddies vary in only one or no individuals, export smooth file as 0 and skip
   smallvar <- ars %>%
@@ -185,7 +182,10 @@ for(i in 19:nrow(srs)){
   aic_m1 <- AIC(m1$mer)
   bic_m1 <- BIC(m1$mer)
   
-  # 3. Odds Ratios
+  
+  #-----------------------------------------------------------------------------
+  # Get Odds Ratios
+  #-----------------------------------------------------------------------------
   
   # get smooths
   sm <- smooth_estimates(m1$gam, n = 1000) %>%
@@ -209,7 +209,10 @@ for(i in 19:nrow(srs)){
   acf1 <- acf(residuals(m1$gam))
   
   
-  # 4. Export
+  #-----------------------------------------------------------------------------
+  # Export Outputs
+  #-----------------------------------------------------------------------------
+  
   
   # export model
   saveRDS(m1, paste0("output/gamms/models/", this.species, "/", this.site, " ", this.stage, " gamm.rds"))
@@ -225,7 +228,9 @@ for(i in 19:nrow(srs)){
   saveRDS(acf1, paste0("output/gamms/acf/", this.species, " ", this.site, " ", this.stage, " acf.rds"))
   
   
-  # 5. Model Diagnostics
+  #-----------------------------------------------------------------------------
+  # Model Diagnostics
+  #-----------------------------------------------------------------------------
   
   # print model diagnostics initiation
   print("Calculating delta AIC")
