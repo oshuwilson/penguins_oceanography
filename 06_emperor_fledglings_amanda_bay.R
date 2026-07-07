@@ -1,6 +1,6 @@
-#-----------------------------------------------------------
+#-------------------------------------------------------------------------------
 # Plots for fledgling Emperor Penguins from Amanda Bay
-#-----------------------------------------------------------
+#-------------------------------------------------------------------------------
 
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02/")
@@ -205,19 +205,6 @@ edmap
 # 2. GAMM circular plots
 #----------------------------------------------------------------------------------
 
-# # read in GAMM
-# m1 <- readRDS(paste0("output/models/EMPE/Amanda Bay post-breeding gamm.rds"))
-# 
-# # get smooths
-# sm <- smooth_estimates(m1$gam, n = 1000) %>%
-#   add_confint()
-# 
-# # apply exponential to smooths for odds ratios
-# sm <- sm %>%
-#   mutate(.estimate = exp(.estimate),
-#          .lower_ci = exp(.lower_ci),
-#          .upper_ci = exp(.upper_ci))
-
 # read in smooths
 sm <- readRDS("output/GAMMs/smooths/EMPE/Amanda Bay post-breeding smooths.rds")
 
@@ -399,6 +386,7 @@ ggplot(sm1, aes(x = ed2, y = .estimate)) +
   geom_line() +
   theme_bw()
 
+# get specific smooth values
 max(sm1$.estimate)
 sm1 %>%
   filter(ed2 < 0.01 & ed2 > 0) %>%

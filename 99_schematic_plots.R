@@ -1,6 +1,6 @@
-#--------------------------------------
+#-------------------------------------------------------------------------------
 # Schematic Plots
-#--------------------------------------
+#-------------------------------------------------------------------------------
 
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
@@ -12,9 +12,9 @@ library(suncalc)
 library(gratia)
 library(cowplot)
 
-#-------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # 1. Plot of all tracks
-#-------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 
 # read in tracks for incubating macaroni penguins from Fairy Point
 tracks <- readRDS("output/hmm/hmm_tracks_by_colony/MAPE/Fairy Point, Bird Island incubation tracks checked.rds")
@@ -63,6 +63,8 @@ p1 <- ggplot() +
     legend.box.background = element_rect(fill='transparent') #transparent legend panel
   )
 p1
+
+# save
 ggsave("output/schematic/tracks.png", p1, bg = "transparent")
 
 
@@ -220,6 +222,8 @@ p6 <- ggplot() +
     legend.box.background = element_rect(fill='transparent', color = NA) #transparent legend panel
   )
 p6
+
+# save
 ggsave("output/schematic/curr.png", p6, bg = "transparent")
 
 

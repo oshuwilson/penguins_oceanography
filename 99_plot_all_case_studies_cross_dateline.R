@@ -1,6 +1,6 @@
-#-----------------------------------------------
-# Make colony summary plots for each case study
-#-----------------------------------------------
+#------------------------------------------------------------------------------------
+# Make colony summary plots for each case study (special code for crossing dateline)
+#------------------------------------------------------------------------------------
 
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
@@ -18,13 +18,9 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02")
 
 # read in species-site-stage metadata
 srs <- read.csv("data/tracks/species_site_stage_v2.csv")
-# FIX i = 26, 44 (rotate)
-# i = 32, 33 is Pointe Geologie - slow
-# i = 56 Macaroni Cwm not run on iridis
 
-# completed 1:25, 27:43, 45:74
-
-for(i in 44){
+# loop over studies crossing dateline
+for(i in c(26, 44)){
   
   rm(list=setdiff(ls(), c("srs", "i")))
   
@@ -120,37 +116,6 @@ for(i in 44){
     group_by(individual_id) %>%
     summarise(start_date = min(as_date(date))) %>%
     mutate(start_year = year(start_date))
-  if(i == 7){
-    deps <- deps %>%
-      mutate(start_year = 2003)
-  }
-  if(i == 9){
-    deps <- deps %>% 
-      mutate(start_year = 1998)
-  }
-  if(i == 30){
-    deps <- deps %>%
-      mutate(start_year = 2017)
-  }
-  if(i == 37){
-    deps <- deps %>%
-      mutate(start_year = 2017)
-  }
-  if(i == 50){
-    deps <- deps %>%
-      mutate(start_year = 2003)
-  }
-  if(i == 66){
-    deps <- deps %>%
-      mutate(start_year = 2012)
-  }
-  dep_years <- deps %>%
-    pull(start_year) %>%
-    unique() %>%
-    sort()
-  if(i == 33){
-    dep_years <- c(2015, 2017, 2020)
-  }
   
   # remove any outside satellite data range
   dep_years <- dep_years[dep_years < 2022]
@@ -160,6 +125,7 @@ for(i in 44){
     dep_years <- dep_years[dep_years > 1992]
   }
   
+  # loop over years
   for(z in 1:length(dep_years)){
     
     # for each year
@@ -207,43 +173,6 @@ for(i in 44){
     # crop to extent of tracks
     e <- ext(trax) + c(0.5, 0.5, 0.5, 0.5)
     eddies <- crop(eddies, e)
-    
-    # remove bugged out layers from Auger eddies
-    if(i == 30){
-      eddies <- eddies[[-10]]
-    }
-    if(i == 31){
-      eddies <- eddies[[-3]]
-    }
-    if(i == 37){
-      eddies <- eddies[[time(eddies) != as_date("2017-01-29")]]
-    }
-    if(i == 39){
-      eddies <- eddies[[!time(eddies) %in% as_date(c("2014-01-15", "2014-01-18"))]]
-    }
-    if(i == 40){
-      eddies <- eddies[[!time(eddies) %in% as_date(c("2013-12-10"))]]
-    }
-    if(i == 42){
-      eddies <- eddies[[!time(eddies) %in% as_date(c("2019-01-19", "2019-01-22", "2019-01-25",
-                                                     "2019-02-03", "2019-02-06", "2019-02-09",
-                                                     "2019-02-12", "2019-04-04", "2019-04-25",
-                                                     "2019-05-10", "2019-06-09", "2019-07-30",
-                                                     "2019-08-05", "2019-08-26", "2019-10-19",
-                                                     "2019-10-22", "2019-10-28", "2019-10-31"))]]
-    }
-    if(i == 47){
-      eddies <- eddies[[!time(eddies) %in% as_date(c("2015-12-12", "2015-12-24"))]]
-    }
-    if(i == 48){
-      eddies <- eddies[[!time(eddies) %in% as_date(c("2015-12-12", "2015-12-24", "2016-01-17",
-                                                     "2016-01-20", "2016-01-23", "2016-01-26",
-                                                     "2016-02-01"))]]
-    }
-    if(i == 73){
-      eddies <- eddies[[!time(eddies) %in% as_date(c("2016-01-17", "2016-01-20"))]]
-    }
-    
     
     # classify eddies as anticyclone (below -1), cyclone (above 1) or non-eddy
     mat1 <- matrix(c(-3, -1, -1,
@@ -304,9 +233,9 @@ for(i in 44){
   }
   
   
-  #----------------------------------------------------------------------------------
+  #-----------------------------------------------------------------------------
   # 2. GAMM circular plots
-  #----------------------------------------------------------------------------------
+  #-----------------------------------------------------------------------------
   
   # load in GAMM model
   if(auger == "yes"){
@@ -462,9 +391,9 @@ for(i in 44){
   print(odds_ratios)
   
   
-  #-------------------------------------------------------------------------------
+  #-----------------------------------------------------------------------------
   # 3. GAMM statistics
-  #-------------------------------------------------------------------------------
+  #-----------------------------------------------------------------------------
   
   # read in GAMM stats
   stats <- readRDS("output/models/model_stats.rds")
@@ -528,8 +457,9 @@ for(i in 44){
                fontface = ifelse(cbi > 0.4, "bold", "plain"))
   plot_label
   
-  #-------------------------------------------------------------------------------
+  #-----------------------------------------------------------------------------
   # 4. Bring it all together
+  #-----------------------------------------------------------------------------
   
   # get legend from the first eddy plot
   eddy_legend <- get_legend(edplots[[1]])
@@ -561,6 +491,3 @@ for(i in 44){
   # remove conditional items
   rm(m1, aic, delta_aic, cbi, sm)
 }
-
-final_plot + ggview::canvas(12, 13)
-

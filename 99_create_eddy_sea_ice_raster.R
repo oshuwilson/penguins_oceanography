@@ -1,3 +1,7 @@
+#-------------------------------------------------------------------------------
+# Create a circumpolar sea ice eddy raster from Matthis Auger's data
+#-------------------------------------------------------------------------------
+
 rm(list=ls())
 setwd("/iridisfs/scratch/jcw2g17/")
 
@@ -9,13 +13,19 @@ setwd("/iridisfs/scratch/jcw2g17/")
   library(dplyr)
 }
 
-#------------ --------#
-## Set Up Daily Loop ##
-#------- -------------#
+#-------------------------------------------------------------------------------
+# Setup daily loop
+#-------------------------------------------------------------------------------
 
 #read in cyclonic and anticyclonic eddies
 all_cyclones <- readRDS("eddies_auger/cyclones.RDS")
 all_anticyclones <- readRDS("eddies_auger/anticyclones.RDS")
+
+#remove unrealistically big radii (> 200 km)
+all_cyclones <- all_cyclones %>%
+  filter(radius < 200000)
+all_anticyclones <- all_anticyclones %>%
+  filter(radius < 200000)
 
 #loop over each year
 for(z in 2013:2021){
@@ -57,9 +67,9 @@ for(z in 2013:2021){
     anticyclones <- project(anticyclones, "EPSG:3031")
     
     
-    #---------------------------------#
-    ## Create Cyclone Distance Layer ##
-    #---------------------------------#
+    #---------------------------------------------------------------------------
+    # Create distance to cyclone layer
+    #---------------------------------------------------------------------------
     
     #create 2 x Radius polygons
     double <- 2 * cyclones$radius
@@ -105,9 +115,9 @@ for(z in 2013:2021){
     cyclone_dists <- complete_dists
     
     
-    #-------------------------------------#
-    ## Create Anticyclone Distance Layer ##
-    #-------------------------------------#
+    #---------------------------------------------------------------------------
+    # Create distance to anticyclone layer
+    #---------------------------------------------------------------------------
 
     #create 2 x Radius polygons
     double <- 2 * anticyclones$radius
@@ -140,9 +150,9 @@ for(z in 2013:2021){
     anticyclone_dists <- complete_dists
     
     
-    #--------------------#
-    ## Join Eddy Layers ##
-    #--------------------#
+    #---------------------------------------------------------------------------
+    # Join layers into one
+    #---------------------------------------------------------------------------
     
     #join layers and choose the minimum relative distance where they overlap
     eddy_dists <- rast(list(cyclone_dists, anticyclone_dists))

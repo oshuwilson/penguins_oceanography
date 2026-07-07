@@ -1,3 +1,7 @@
+#-------------------------------------------------------------------------------
+# Create a circumpolar raster from META3.2DT eddy data
+#-------------------------------------------------------------------------------
+
 rm(list=ls())
 setwd("/iridisfs/scratch/jcw2g17/")
 
@@ -9,9 +13,9 @@ setwd("/iridisfs/scratch/jcw2g17/")
   library(dplyr)
 }
 
-#------------ --------#
-## Set Up Daily Loop ##
-#------- -------------#
+#-------------------------------------------------------------------------------
+# Setup daily loop
+#-------------------------------------------------------------------------------
 
 #read in cyclonic and anticyclonic eddies
 all_cyclones <- readRDS("eddies/all_cyclones.RDS")
@@ -54,9 +58,9 @@ for(z in 2000){
     anticyclones <- project(anticyclones, "EPSG:6932")
     
     
-    #---------------------------------#
-    ## Create Cyclone Distance Layer ##
-    #---------------------------------#
+    #---------------------------------------------------------------------------
+    # Create distance to cyclone layer
+    #---------------------------------------------------------------------------
     
     #create 2 x Radius polygons
     double <- 2 * cyclones$radius
@@ -92,8 +96,6 @@ for(z in 2000){
       
       #bind with other eddies
       all_rel_dists[[i]] <- this_rel_dist
-      
-      
     }
     
     #join each relative distance into one raster, with the minimum distance taking priority
@@ -102,9 +104,9 @@ for(z in 2000){
     cyclone_dists <- complete_dists
     
     
-    #-------------------------------------#
-    ## Create Anticyclone Distance Layer ##
-    #-------------------------------------#
+    #---------------------------------------------------------------------------
+    # Create distance to anticyclone layer
+    #---------------------------------------------------------------------------
 
     #create 2 x Radius polygons
     double <- 2 * anticyclones$radius
@@ -137,9 +139,9 @@ for(z in 2000){
     anticyclone_dists <- complete_dists
     
     
-    #--------------------#
-    ## Join Eddy Layers ##
-    #--------------------#
+    #---------------------------------------------------------------------------
+    # Join layers into one
+    #---------------------------------------------------------------------------
     
     #join layers and choose the minimum relative distance where they overlap
     eddy_dists <- rast(list(cyclone_dists, anticyclone_dists))

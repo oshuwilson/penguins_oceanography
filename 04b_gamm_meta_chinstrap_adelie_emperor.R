@@ -52,89 +52,9 @@ for(i in 1:nrow(srs)){
     next
   }
   
+  # read in data
+  data <- readRDS(paste0("output/extractions/", this.species, "/", this.site, " ", this.stage, " thinned.RDS"))
   
-  #-----------------------------------------------------------------------------
-  # Preprocess Data
-  #-----------------------------------------------------------------------------
-  
-  # if fledglings, define original stage to post-breeding/pre-moult depending on species
-  # RAATD data used these codes instead for fledglings
-  if(this.stage == "fledglings"){
-    if(this.species == "ADPE"){
-      og.stage <- "pre-moult"
-    } else {
-      og.stage <- "post-breeding"
-    }
-  } else {
-    og.stage <- this.stage
-  }
-  
-  #read in original tracks to get lat/lons and error info
-  original <- readRDS(paste0("output/tracks/", this.species, "/", area, " ", og.stage, " tracks.RDS"))
-  
-  #append latitudes, longitudes, and errors to state tracks
-  tracks <- tracks %>% 
-    left_join(select(original, individual_id, date, lon, lat, 
-                     longitude_se, latitude_se, 
-                     lon_se_km, lat_se_km))
-  
-  #remove tracks with large error
-  tracks <- tracks %>%
-    filter((latitude_se < 0.05 & longitude_se < 0.125 | #greater allowance for longitude as this is compressed at poles
-             (lon_se_km < 5000 & lat_se_km < 5000)))
-  
-  #create column in date format for suncalc
-  tracks <- tracks %>%
-    rename(datetime = date) %>%
-    mutate(date = as_date(datetime))
-  
-  #get dawn times
-  tracks$dawn <- getSunlightTimes(data = tracks,
-                                  keep = c("dawn"), tz = "UTC") %>%
-    pull(dawn)
-  
-  #get dusk times
-  tracks$dusk <- getSunlightTimes(data = tracks,
-                                  keep = c("dusk"), tz = "UTC") %>%
-    pull(dusk)
-  
-  #only keep points between sunrise and sunset
-  tracks <- tracks %>%
-    filter(datetime >= dawn & datetime <= dusk |
-             is.na(dawn) & is.na(dusk))
-  
-  # filter to ARS only
-  ars <- tracks %>% filter(state == "ARS")
-  
-  # resample non-eddies to 0
-  ars <- ars %>%
-    mutate(ed2 = ifelse(eddies > -1 & eddies < 1, 0, eddies))
-  
-  # resample non-eddies in background data to 0
-  back <- back %>%
-    mutate(ed2 = ifelse(eddies > -1 & eddies < 1, 0, eddies))
-  
-  # create binary presence/absence cols
-  ars$pa <- 1
-  back$pa <- 0
-  
-  # select key variables
-  columns <- c("individual_id", "ed2", "depth", "sic", "curr", "pa", "x", "y")
-  ars <- ars %>% 
-    select(all_of(columns))
-  back <- back %>%
-    select(all_of(columns))
-  
-  # join datasets together
-  data <- bind_rows(ars, back)
-  
-  # remove sea ice concentrations above 10% (poor eddy detection)
-  if(rm_pack_ice == T){
-    data <- data %>%
-      filter(sic < 0.1)
-  }
-  
-
   #-----------------------------------------------------------------------------
   # Fit GAMM
   #-----------------------------------------------------------------------------

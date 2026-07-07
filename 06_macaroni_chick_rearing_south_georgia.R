@@ -1,6 +1,6 @@
-#-----------------------------------------------------------
+#-------------------------------------------------------------------------------
 # Plots for chick-rearing Macaroni Penguins from Fairy Point
-#-----------------------------------------------------------
+#-------------------------------------------------------------------------------
 
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02/")
@@ -208,22 +208,10 @@ edplots2[[6]] <- eddy_legend
 edmap <- plot_grid(plotlist = edplots2, nrow = 2)
 edmap
 
+
 #----------------------------------------------------------------------------------
 # 2. GAMM circular plots
 #----------------------------------------------------------------------------------
-
-# # read in GAMM
-# m1 <- readRDS(paste0("output/models/MAPE/Fairy Point, Bird Island early chick-rearing gamm.rds"))
-# 
-# # get smooths
-# sm <- smooth_estimates(m1$gam, n = 1000) %>%
-#   add_confint()
-# 
-# # apply exponential to smooths for odds ratios
-# sm <- sm %>%
-#   mutate(.estimate = exp(.estimate),
-#          .lower_ci = exp(.lower_ci),
-#          .upper_ci = exp(.upper_ci))
 
 # read in smooths
 sm <- readRDS("output/GAMMs/smooths/MAPE/Fairy Point, Bird Island early chick-rearing smooths.rds")
@@ -291,7 +279,6 @@ bg <- sm2 %>%
   filter(ed2 == "(-0.125,0.125]") %>%
   mutate(x = 1, y = 1)
 
-
 # plot cyclones
 p2 <- ggplot(cyclones, aes(x = band, fill = as.numeric(OR))) +
   geom_bar(width = 1) +
@@ -356,9 +343,9 @@ odds_ratios <- plot_grid(p3, mid, p2, ncol = 3, rel_widths = c(1, 0.2, 1))
 odds_ratios
 
 
-#----------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # 3. Plot all together
-#----------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 
 # read in eddy amplitude/age/intensity plot
 attributes <- readRDS("output/eddy attributes/plots/eddy_attributes_case_4.rds")
@@ -373,9 +360,9 @@ ggsave("text/draft figs/new/3. Fairy Point Chick-Rearing.png", grid,
        height = 18, width = 12)
 
 
-#----------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # 4. Supplementary - Eddies and FSLE
-#----------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 
 for(z in 1:length(dep_years)){
   
@@ -515,9 +502,9 @@ summary(m_fsle)
 em1 <- emmeans(m_fsle, pairwise ~ state)
 summary(em1)
 
-#--------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # 5. Compare trip lengths
-#--------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 
 # get colony location
 col <- data.frame(lon = -38.04180, lat = -54.0058)
@@ -552,9 +539,10 @@ ggplot(maxdists, aes(x = as.factor(iso), y = max_dist)) +
   geom_point()
 
 
-#--------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # 6. Fledgling Weights
-#--------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
 # read in fledgling data
 wghts <- read.csv("exploration/results colonies/fairy point macs cr/BI_Mac_Fledging_weight.csv")
 
@@ -580,115 +568,3 @@ ggsave("text/draft figs/new/S3. Fairy Point Chick-Rearing weights.png",
 m1 <- aov(Weight_kg ~ year, data = wghts)
 summary(m1)
 TukeyHSD(m1)
-
-
-#-------------------------------------------------------------------------------
-# 7. Chlorophyll
-#-------------------------------------------------------------------------------
-
-
-for(z in c(1:5)){
-  print(z)
-  
-  year <- dep_years[z]
-  
-  # get individuals belonging to this year
-  year_inds <- deps %>% 
-    filter(start_year == year) %>%
-    pull(individual_id)
-  
-  if(length(year_inds) == 0){
-    next
-  }
-  
-  # remove anomalous track from 2004
-  if(year == 2004){
-    year_inds <-  year_inds[year_inds != "MAPE-dtsetBirdLife751-H35-RAATD"]
-  }
-  
-  # get the track lines for this year
-  lines_year <- trax_lines %>%
-    filter(individual_id %in% year_inds) 
-  
-  # limit track to this year
-  trax_year <- trax %>%
-    filter(individual_id %in% year_inds)
-  
-  # get chl for this year
-  chl <- rast(paste0("E:/Satellite_Data/daily/chl/resampled/chl_", year, "_resampled.nc"))
-  
-  # limit chl to dates of tracks
-  chl <- chl[[time(chl) %in% dates]]
-  
-  # crop 
-  chl <- crop(chl, e)
-  
-  # get mean chl
-  chl <- mean(chl, na.rm=T)
-  
-  # extract chl to ARS locations
-  trax_year$chl <- extract(chl, trax_year, ID = F)
-  print(ggplot(trax_year, aes(x = chl)) +
-          geom_density(aes(fill = state), alpha = 0.5) +
-          theme_bw())
-  
-  # create dataframe of chl vs state
-  chl_df <- trax_year %>%
-    as.data.frame() %>%
-    select(state, chl, individual_id) %>%
-    drop_na() %>%
-    mutate(this_year = year)
-  
-  crop_coast <- crop(coast, e)
-  
-  # get a plot of the chl for that year
-  chlplot <- ggplot() +
-    geom_spatraster(data = chl) +
-    geom_spatvector(data = crop_coast, fill = "white") +
-    geom_spatvector(data = lines_year, col = "grey40", lwd = 0.75) +
-    geom_spatvector(data = trax_year %>% filter(state == "ARS"), aes(col = state), size = 1) +
-    scale_fill_viridis_c(trans = "log") +
-    scale_color_manual(values = "grey20", name = "", labels = "ARS Events") +
-    theme_bw() +
-    scale_x_continuous(expand = c(0, 0), breaks = -41:-37) +
-    scale_y_continuous(expand = c(0, 0), breaks = -55:-52) +
-    ggtitle(year) +
-    guides(fill = "none", col = "none")
-  
-  # get the eddy plot for the same year
-    eddyplot <- edplots2[[z]]
-  
-  # plot side by side
-  dualplot <- plot_grid(chlplot, eddyplot, ncol = 2)
-  
-  # assign to list
-  if(z == 1){
-    dualplots <- list()
-  }
-  dualplots[[z]] <- dualplot
-  print(dualplot)
-  
-  # join chl dfs
-  if(z == 1){
-    chl_dfs <- chl_df
-  } else {
-    chl_dfs <- bind_rows(chl_dfs, chl_df)
-  }
-}
-
-# get legend of chl
-legplot <- ggplot() +
-  geom_spatraster(data = chl) +
-  scale_fill_viridis_c(name = "Chlorophyll-a\nConcentration")
-chl_legend <- get_legend(legplot)
-
-# combine legends
-legends <- plot_grid(chl_legend, eddy_legend, ncol = 2)
-
-dualplots[[6]] <- legends
-
-
-# plot dual plots
-dualgrid <- plot_grid(plotlist = dualplots, ncol = 2)
-dualgrid + ggview::canvas(12, 12)
-ggsave("~/OneDrive - University of Southampton/Documents/Chapter 02/exploration/peer review/chl/chl and eddies.png", dualgrid, height = 12, width = 12)

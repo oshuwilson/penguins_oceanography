@@ -39,7 +39,12 @@ for(this.site in regions){
   
   #loop over each stage
   for(this.stage in stages){
-    
+
+    #use Matthis Auger's sea ice eddy product?
+    sea_ice_eddy <- srs %>%
+      filter(species == this.species & site == this.site & stage == this.stage) %>%
+      pull(auger)
+        
     #load in tracks and background data
     tracks <- readRDS(paste0("output/hmm/hmm_tracks_by_colony/", this.species, "/", this.site, " ", this.stage, " tracks checked.rds"))
     back <- readRDS(paste0("output/background/", this.species, "/", this.site, " ", this.stage, " background.RDS"))
@@ -108,6 +113,12 @@ for(this.site in regions){
     #eddies
     data <- dynamic_extract("eddies", data)
     print("eddies")
+    
+    #sea ice eddies
+    if(sea_ice_eddy == "yes"){
+      data <- dynamic_extract("eddies_auger", data)
+      print("eddies_auger")
+    }  
     
     
     #-----------------------------------------------------------------------------

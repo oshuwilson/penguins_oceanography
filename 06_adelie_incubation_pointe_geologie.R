@@ -1,6 +1,6 @@
-#-----------------------------------------------------------
+#-------------------------------------------------------------------------------
 # Plots for incubating Adelie Penguins from Pointe Geologie
-#-----------------------------------------------------------
+#-------------------------------------------------------------------------------
 
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02/")
@@ -14,6 +14,7 @@ setwd("~/OneDrive - University of Southampton/Documents/Chapter 02/")
   library(gamm4)
   library(cowplot)
   library(sf)
+  library(emmeans)
 }
 
 # coastline
@@ -98,7 +99,7 @@ dep_years <- deps %>%
   sort()
 dep_years <- c(2015, 2017, 2018, 2019, 2020)
 
-
+# loop over each year
 for(z in 1:length(dep_years)){
   
   # for each year
@@ -128,17 +129,6 @@ for(z in 1:length(dep_years)){
   # crop to extent of tracks
   e <- ext(trax) + c(0.5, 0.5, 0.5, 0.5)
   eddies <- crop(eddies, e)
-  
-  # remove error layers
-  if(year == 2013){
-    eddies <- eddies[[time(eddies) != as_date("2013-12-10")]]
-  }
-  if(year == 2015){
-    eddies <- eddies[[time(eddies) != as_date("2015-12-12")]]
-  }
-  if(year == 2017){
-    eddies <- eddies[[!time(eddies) %in% c(as_date("2017-12-13"), as_date("2017-12-22"))]]
-  }
   
   # classify eddies as anticyclone (below -1), cyclone (above 1) or non-eddy
   mat1 <- matrix(c(-3, -1, -1,
@@ -196,7 +186,6 @@ for(z in 1:length(dep_years)){
   }
   edplots[[z]] <- p1
 }
-
 
 # get legend from the first eddy plot
 eddy_legend <- get_legend(edplots[[1]])
@@ -507,7 +496,7 @@ ggsave("text/draft figs/new/S5. Pointe Geologie incubation sic.png",
        dualgrid, width = 15, height = 20)
 
 
-# Plot ARS vs sea ice concentration
+# plot ARS vs sea ice concentration
 tracks <- tracks %>% left_join(deps %>% select(individual_id, start_year))
 p1 <- ggplot(tracks %>% filter(!is.na(start_year) &
                            start_year %in% c(2015, 2017:2020)), aes(x = dist2ice)) +
@@ -531,8 +520,7 @@ m_fsle <- lmer(dist2ice ~ state + (1|individual_id) + (1|start_year),
                data = tracks %>% filter(start_year %in% c(2015, 2017:2020)))
 summary(m_fsle)
 
-library(emmeans)
-
+# get estimated means
 em1 <- emmeans(m_fsle, pairwise ~ state)
 summary(em1)
 m1 <- aov(dist2ice ~ state, data = tracks)

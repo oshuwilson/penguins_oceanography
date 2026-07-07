@@ -1,6 +1,6 @@
-#-----------------------------------------------------------
+#-------------------------------------------------------------------------------
 # Plots for chick-rearing King Penguins from Ratmanoff
-#-----------------------------------------------------------
+#-------------------------------------------------------------------------------
 
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02/")
@@ -120,9 +120,6 @@ for(z in 1:length(dep_years)){
   # read in eddies for these dates
   eddies <- rast(paste0("E:/Satellite_Data/daily/eddies/eddies_", year, ".nc"))
   eddies <- eddies[[time(eddies) %in% year_dates]]
-  # eddiesn <- rast(paste0("E:/Satellite_Data/daily/eddies/eddies_", yearn, ".nc"))
-  # eddiesn <- eddiesn[[time(eddiesn) %in% year_dates]]
-  # eddies <- c(eddies, eddiesn)
   
   # crop to extent of tracks
   e <- ext(trax) + c(0.5, 0.5, 0.5, 0.5)
@@ -489,11 +486,12 @@ fsle_dfs %>%
 m_fsle <- lmer(fsle ~ state + (1|individual_id), data = fsle_dfs)
 summary(m_fsle)
 
+# estimated means
 em1 <- emmeans(m_fsle, pairwise ~ state)
 summary(em1)
 
 #----------------------------------------------------------------------------------
-# 4. Trip lengths
+# 5. Trip lengths
 #----------------------------------------------------------------------------------
 
 lens <- tracks %>%

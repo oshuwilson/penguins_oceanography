@@ -1,6 +1,6 @@
-#-----------------------------------------------------------
+#-------------------------------------------------------------------------------
 # Plots for incubating Macaroni Penguins from Fairy Point
-#-----------------------------------------------------------
+#-------------------------------------------------------------------------------
 
 rm(list=ls())
 setwd("~/OneDrive - University of Southampton/Documents/Chapter 02/")
@@ -203,19 +203,6 @@ edmap <- plot_grid(edmap, eddy_legend, rel_widths = c(0.8, 0.2))
 #----------------------------------------------------------------------------------
 # 2. GAMM circular plots
 #----------------------------------------------------------------------------------
-
-# # read in GAMM
-# m1 <- readRDS(paste0("output/models/MAPE/Fairy Point, Bird Island incubation gamm.rds"))
-# 
-# # get smooths
-# sm <- smooth_estimates(m1$gam, n = 1000) %>%
-#   add_confint()
-# 
-# # apply exponential to smooths for odds ratios
-# sm <- sm %>%
-#   mutate(.estimate = exp(.estimate),
-#          .lower_ci = exp(.lower_ci),
-#          .upper_ci = exp(.upper_ci))
 
 # read in smooths
 sm <- readRDS("output/GAMMs/smooths/MAPE/Fairy Point, Bird Island incubation smooths.rds")
@@ -503,5 +490,6 @@ fsle_dfs %>%
 m_fsle <- lmer(fsle ~ state + (1|individual_id), data = fsle_dfs)
 summary(m_fsle)
 
+# estimated means
 em1 <- emmeans(m_fsle, pairwise ~ state)
 summary(em1)
