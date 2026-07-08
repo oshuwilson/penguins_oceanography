@@ -21,7 +21,8 @@ This repository contains scripts used to relate penguin foraging trajectories to
 ├── 02a_background_central_place_foraging.R     # Create background samples for central place foraging case studies
 ├── 02b_backgorund_free_ranging.R               # Create background samples for other case studies
 │
-├── 03_environmental_extraction.R               # Extract environmental variables to ARS locations and background samples
+├── 03a_environmental_extraction.R              # Extract environmental variables to ARS locations and background samples
+├── 03b_thinning_tracks.R                       # Decorrelate tracks and prepare data for modelling
 │
 ├── 04a_gamm_meta_king_macaroni.R               # Fit GAMMs for king and macaroni penguin case studies (no sea ice) using the Mesoscale Eddy Trajectory Atlas
 ├── 04b_gamm_meta_chinstrap_adelie_emperor.R    # Fit GAMMs for chinstrap, Adelie, and emperor penguin case studies (with sea ice) using the Mesoscale Eddy Trajectory Atlas
@@ -29,9 +30,9 @@ This repository contains scripts used to relate penguin foraging trajectories to
 │
 ├── 05_summarise_specialisation_by_group.R      # Compare how regional, interspecific, and behavioural variation affect the proportion of case studies that are specialised
 │
-├── 06_*.R                                      # Scripts used to investigate five comprehensive case studies in more detail
+├── 06_*.R                                      # Investigate five comprehensive case studies in more detail
 │
-├── 07_*.R                                      # Scripts used to match and test how eddy maturity, amplitude, and intensity vary in the five case studies
+├── 07_*.R                                      # Match and test how eddy maturity, amplitude, and intensity vary in the five case studies
 │
 ├── 99_create_eddy_raster.R                     # Create a daily circumpolar raster using the Mesoscale Eddy Trajectory Atlas
 ├── 99_create_eddy_sea_ice_raster.R             # Create a daily circumpolar raster using a specialised sea ice eddy detection algorithm
