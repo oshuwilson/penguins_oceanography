@@ -31,6 +31,8 @@ This repository contains scripts used to relate penguin foraging trajectories to
 │
 ├── 06_*.R                                      # Scripts used to investigate five comprehensive case studies in more detail
 │
+├── 07_*.R                                      # Scripts used to match and test how eddy maturity, amplitude, and intensity vary in the five case studies
+│
 ├── 99_create_eddy_raster.R                     # Create a daily circumpolar raster using the Mesoscale Eddy Trajectory Atlas
 ├── 99_create_eddy_sea_ice_raster.R             # Create a daily circumpolar raster using a specialised sea ice eddy detection algorithm
 ├── 99_plot_all_case_studies.R                  # Plot each case study for supplementary information
