@@ -1,6 +1,6 @@
 # Penguins & Oceanography
 
-Code supporting a manuscript in review
+Code supporting the manuscript **Mesoscale eddies in the Southern Ocean influence foraging trip behaviour of multiple penguin species** by Wilson et al. (2026).
 
 ---
 
@@ -51,14 +51,10 @@ The code is written entirely in **R**
 
 ## Citation
 
-If you use this repository in your research, please cite the associated publication (when available) and acknowledge the data providers:
+If you use this repository in your research, please cite the associated publication:
 
-```text
-Author(s). Year.
-Title.
-Journal.
-DOI
-```
+Joshua C. Wilson, Philip N. Trathan, Hugh J. Venables, David G. Ainley, Matthis Auger, Alistair M.M. Baylis, Charles-André Bost, Louise Emmerson, Kimberley T. Goetz, Mark A. Hindell, Jefferson T. Hinke, Catharine Horswill, Aymeric Houstin, Akiko Kato, Nobuo Kokubun, Gerald L. Kooyman, Małgorzata Korczak-Abshire, Sara Labrousse, Céline Le Bohec, Andrew D. Lowther, Phil O’B Lyver, Ana Laura Machado-Gaye, Azwianewi B Makhado, Silvia Olmastroni, Pierre A. Pistorius, Klemens Pütz, Norman Ratcliffe, Yan Ropert-Coudert, Peter G. Ryan, Jean-Baptiste Sallée, Mercedes Santos, Richard B. Sherley, Alvaro Soutullo, Akinori Takahashi, Barbara Wienecke, Daniel P. Zitterbart, Ryan R. Reisinger (2026). Mesoscale eddies in the Southern Ocean influence foraging trip behaviour of multiple penguin species, Progress in Oceanography, 103798, https://doi.org/10.1016/j.pocean.2026.103798.
+
 
 ---
 
